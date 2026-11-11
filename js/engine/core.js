@@ -23,7 +23,8 @@ export function baseKeywords(card) {
 export const hasResilience = (card) => card.category !== "Joueur" && card.category !== "Essence" && /Résilience/i.test(card.effect || "");
 
 export class Game {
-  constructor({ decks, names, ai, ask, onUpdate, log, seed = null }) {
+  constructor({ decks, names, ai, ask, onUpdate, log, fx = null, seed = null }) {
+    this.fx = fx;                                                      // animations facultatives (interface) : fx(type, données), attendues
     this.rand = seed === null ? Math.random : mulberry32(seed);      // aléatoire propre à la partie (reproductible avec une graine)
     this.uidn = 1; const mk = (id) => ({ uid: this.uidn++, id });   // identifiants propres à la partie
     this.players = [0, 1].map((i) => ({
@@ -42,6 +43,7 @@ export class Game {
   P(pi) { return this.players[pi]; }
   opp(pi) { return 1 - pi; }
   log(msg) { this._log(msg); }
+  async _fx(type, data) { if (this.fx) { try { await this.fx(type, data); } catch (e) { /* une animation ne doit jamais bloquer la partie */ } } }
   update() { this._update(this); }
   async ask(pi, req) {
     if (this.winner !== null) return req.allowNone ? null : req.options?.[0]?.value;
@@ -203,6 +205,7 @@ export class Game {
         if (c) { this.P(vpi).hand = this.P(vpi).hand.filter((x) => x !== c); this.discardCard(vpi, c); where = "hand"; }
       }
     }
+    await this._fx("ko", { victim, where });
     await this.removeJoueur(victim, where);
     if (killer && this.ownerOf(killer) >= 0) await this.emit("vanquish", { pi: this.ownerOf(killer), killer, victim, victimPi: vpi });
   }
@@ -224,6 +227,7 @@ export class Game {
   async _riposteHit(victim, ai, attacker) {
     const v = this.attackValue(victim, ai), d = this.defense(attacker);
     this.log(`Riposte : ${C(victim).name} frappe ${C(attacker).name} (${v} contre Def ${d}).`);
+    await this._fx("hit", { attacker: victim, target: attacker, v, d, ok: v >= d, riposte: true });
     if (v >= d) await this.vanquish(attacker, null);
   }
 
@@ -340,6 +344,7 @@ export class Game {
     if (lyon) slot.lyonUsed = true; else await this.engage(slot);
     const atk = card.attacks[ai];
     this.log(`${P.name} attaque avec ${card.name} : ${atk.name}.`);
+    await this._fx("attack", { pi, slot, atk: atk.name });
     await this.emit("attackLine", { pi: opi, lane, attacker: slot });
     // M4 : défausser jusqu'à 3 cartes pour +10 chacune
     for (const o of slot.objets) if (spec(o).onAttack) await spec(o).onAttack(this, slot, pi, o);
@@ -397,10 +402,11 @@ export class Game {
   // Compare l'attaque à la Défense ; renvoie true si le Joueur ciblé est vaincu.
   async hitJoueur(pi, slot, ai, target, support) {
     if (this.keywords(target).has("SHIELD") && !target.shieldUsed) {
-      target.shieldUsed = true; this.log(`Shield : ${C(target).name} ignore l'attaque.`); return false;
+      target.shieldUsed = true; this.log(`Shield : ${C(target).name} ignore l'attaque.`); await this._fx("shield", { attacker: slot, target }); return false;
     }
     const v = this.attackValue(slot, ai) + support + (slot.tmpAtk || 0), d = this.defense(target); slot.tmpAtk = 0;
     this.log(`${v} contre Def ${d}.`);
+    await this._fx("hit", { attacker: slot, target, v, d, ok: v >= d });
     if (v >= d) { await this.vanquish(target, slot); return true; }
     return false;
   }
@@ -409,6 +415,7 @@ export class Game {
     if (!O.pv.length) { this.lose(opi, `${C(slot).name} touche le CEO adverse qui n'a plus de Point de Victoire`); return; }
     const top = O.pv.shift();
     this.log(`${C(slot).name} touche le CEO de ${O.name} !`);
+    await this._fx("ceo", { attacker: slot, pi: opi, left: O.pv.length });
     if (spec(slot).nukePV?.(this, slot, pi)) { this.discardCard(opi, top); this.log("Le PV est défaussé sans être regardé."); }
     else if (hasResilience(C(top)) && await this.ask(opi, { kind: "confirm", title: `Résilience : révéler ${C(top).name} et déclencher son effet ?`, cards: [top], aiDefault: true })) {
       this.log(`${O.name} déclenche la Résilience de ${C(top).name}.`);

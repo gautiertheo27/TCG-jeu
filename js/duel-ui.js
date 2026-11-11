@@ -5,6 +5,7 @@ import { aiAnswer, aiTurn } from "./engine/ai.js";
 import { autoDeck, validateDeck, PRESETS, buildPreset } from "./engine/deck.js";
 import { cardHTML } from "./cardview.js";
 import { Sync } from "./pvp.js";
+import { makeFx } from "./duel-fx.js";
 
 const $ = (s, r = document) => r.querySelector(s);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -49,10 +50,12 @@ export function initDuel({ S, toast, tick, esc }) {
   }
 
   function showSetup() {
+    dropAsk();
     setup.classList.remove("hidden"); board.classList.add("hidden"); g = null; updateNote();
   }
 
   async function start() {
+    dropAsk();
     const { deck: mine, custom } = chosenDeck();
     if (mine.club.length < 40 || mine.reserve.length < 10) {
       toast(`Collection insuffisante : ${mine.club.length}/40 cartes, ${mine.reserve.length}/10 Essences. Ouvre des boosters ou choisis un deck prêté.`); return;
@@ -63,7 +66,7 @@ export function initDuel({ S, toast, tick, esc }) {
     g = new Game({
       decks: [mine, theirs], names: ["Toi", "Adversaire"], ai: [0, 1],
       ask: (game, pi, req) => (pi === 0 ? humanAsk(req) : aiAnswer(game, pi, req)),
-      onUpdate: render, log: addLog,
+      onUpdate: render, log: addLog, fx: makeFx(() => SEAT),
     });
     window.__gmGame = g;
     addLog(custom ? "Tu joues avec les cartes de ta collection." : `Tu joues avec « ${mine.name} » (cartes prêtées pour la manche).`);
@@ -84,7 +87,9 @@ export function initDuel({ S, toast, tick, esc }) {
     finish();
   }
 
+  function dropAsk() { if (askModal) { askModal = null; modal.classList.add("hidden"); modal.innerHTML = ""; } }   // fin de partie : on abandonne la demande en attente
   async function finish() {
+    dropAsk();
     const won = g.winner === SEAT; const wasOnline = !!sync;
     clearTimeout(oppLeftTimer); if (sync) { sync.close(); sync = null; }
     $("#btnForfeit").classList.add("hidden");
@@ -99,8 +104,9 @@ export function initDuel({ S, toast, tick, esc }) {
 
   // ---------- duel en ligne ----------
   async function startOnline({ seat, seed, decks, names, net, onEnd }) {
+    dropAsk();
     SEAT = seat; OPP = 1 - seat; onlineEnd = onEnd; logs = []; $("#bdLog").innerHTML = ""; busy = false; turnDone = null;
-    g = new Game({ decks, names, ai: [0, 0], seed, ask: () => null, onUpdate: render, log: addLog });
+    g = new Game({ decks, names, ai: [0, 0], seed, ask: () => null, onUpdate: render, log: addLog, fx: makeFx(() => SEAT) });
     sync = new Sync({ seat, net, humanAsk, onForfeit: () => { if (g && g.winner === null) { g.lose(OPP, "abandon de l'adversaire"); render(); sync?.close(); } } });
     sync.attach(g); window.__gmGame = g; window.__gmSync = sync; window.__gmSeat = seat;
     addLog(`Duel contre ${names[OPP]}. Tu joues ${seat === 0 ? "en premier siège" : "en second siège"}.`);
@@ -170,6 +176,7 @@ export function initDuel({ S, toast, tick, esc }) {
   const STEPS = [["entretien", "Entretien"], ["action", "Action"], ["combat", "Combat"], ["fin", "Fin"]];
   function render() {
     if (!g) return;
+    reopenAsk();
     const me = g.P(SEAT), op = g.P(OPP), myTurn = g.active === SEAT && g.winner === null;
     $("#bdOpp").innerHTML = `<b>${esc(op.name)}</b><span class="hand-backs">${Array.from({ length: op.hand.length }, () => "<i></i>").join("")}</span><span>✋ ${op.hand.length}</span>`;
     $("#bdMe").innerHTML = `<b>Toi</b><span>✋ ${me.hand.length}/5</span><span>❤ PV ${me.pv.length}</span>`;
@@ -261,30 +268,34 @@ export function initDuel({ S, toast, tick, esc }) {
     });
   }
   let modalResolve = null;
-  function openModal(html, wire) {
+  let askModal = null;                       // demande du moteur en cours { html, wire } : sa fenêtre ne doit JAMAIS disparaître sans réponse (sinon la partie reste bloquée)
+  function openModal(html, wire, isAsk = false) {
+    if (askModal && !isAsk) return;           // une fiche/aperçu ne remplace pas une demande en attente
+    if (isAsk) askModal = { html, wire };
     modal.innerHTML = `<div class="modal-box">${html}</div>`; modal.classList.remove("hidden");
     modal.querySelectorAll("[data-close]").forEach((b) => b.addEventListener("click", () => { closeModal(); modalResolve?.(null); }));
     wire?.(modal);
   }
-  function closeModal() { modal.classList.add("hidden"); modal.innerHTML = ""; }
-  modal.addEventListener("click", (e) => { if (e.target === modal && !modalResolve) closeModal(); });
+  function closeModal() { if (askModal) return; modal.classList.add("hidden"); modal.innerHTML = ""; }
+  function reopenAsk() { if (askModal && modal.classList.contains("hidden")) { modal.classList.remove("hidden"); modal.innerHTML = `<div class="modal-box">${askModal.html}</div>`; askModal.wire?.(modal); } }
+  modal.addEventListener("click", (e) => { if (e.target === modal) closeModal(); });
 
   // Réponses humaines aux demandes du moteur
   function humanAsk(req) {
     return new Promise((resolve) => {
-      const done = (v) => { modalResolve = null; closeModal(); resolve(v); };
+      const done = (v) => { modalResolve = null; askModal = null; closeModal(); resolve(v); };
       modalResolve = null;
       const title = `<h3>${esc(req.title || "")}</h3>`;
       const cardsRow = (cs) => `<div class="pick-row">${cs.map((c) => `<div class="pick" >${cardHTML(C(c))}</div>`).join("")}</div>`;
       if (req.kind === "info") {
-        openModal(`${title}${cardsRow(req.cards || [])}<div class="btn-col"><button class="btn primary" data-ok>OK</button></div>`, (el) => el.querySelector("[data-ok]").addEventListener("click", () => done(null)));
+        openModal(`${title}${cardsRow(req.cards || [])}<div class="btn-col"><button class="btn primary" data-ok>OK</button></div>`, (el) => el.querySelector("[data-ok]").addEventListener("click", () => done(null)), true);
       } else if (req.kind === "confirm") {
         openModal(`${title}${req.cards ? cardsRow(req.cards) : ""}<div class="btn-row center"><button class="btn primary" data-y>Oui</button><button class="btn" data-n>Non</button></div>`, (el) => {
-          el.querySelector("[data-y]").addEventListener("click", () => done(true)); el.querySelector("[data-n]").addEventListener("click", () => done(false)); });
+          el.querySelector("[data-y]").addEventListener("click", () => done(true)); el.querySelector("[data-n]").addEventListener("click", () => done(false)); }, true);
       } else if (req.kind === "choice") {
         openModal(`${title}<div class="btn-col">${req.options.map((o, i) => `<button class="btn" data-o="${i}">${esc(o.label)}</button>`).join("")}${req.allowNone ? '<button class="btn" data-none>Ne rien faire</button>' : ""}</div>`, (el) => {
           el.querySelectorAll("[data-o]").forEach((b) => b.addEventListener("click", () => done(req.options[+b.dataset.o].value)));
-          el.querySelector("[data-none]")?.addEventListener("click", () => done(null)); });
+          el.querySelector("[data-none]")?.addEventListener("click", () => done(null)); }, true);
       } else {
         // card | slot : choisir parmi des cartes
         const items = req.kind === "card" ? req.cards : req.slots;
@@ -294,7 +305,7 @@ export function initDuel({ S, toast, tick, esc }) {
         openModal(`${title}${hint}${top}<div class="pick-row">${items.map((it, i) => `<div class="pick sel" data-p="${i}">${cardHTML(C(it))}${req.kind === "slot" ? `<small>🛡 ${g.defense(it)}${it.engaged ? " · engagé" : ""}</small>` : ""}</div>`).join("")}</div>
           ${req.allowNone ? '<div class="btn-col"><button class="btn" data-none>Aucun</button></div>' : ""}`, (el) => {
           el.querySelectorAll("[data-p]").forEach((p) => p.addEventListener("click", () => done(items[+p.dataset.p])));
-          el.querySelector("[data-none]")?.addEventListener("click", () => done(null)); });
+          el.querySelector("[data-none]")?.addEventListener("click", () => done(null)); }, true);
       }
     });
   }

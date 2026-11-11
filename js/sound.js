@@ -67,6 +67,11 @@ export const sfx = {
     if (!ok()) return; const t = now(), big = ["E", "L", "S", "P"].includes(best), notes = big ? [523, 659, 784, 1047, 1319] : [523, 659, 784];
     notes.forEach((f, i) => bell(t + i * 0.09, f, 0.6, 0.1));
   },
+  // Combat : élan, impact, K.O., PV touché
+  swing() { if (!ok()) return; const t = now(); noise(t, 0.3, { type: "bandpass", f0: 400, f1: 3200, q: 0.9, gain: 0.22 }); tone(t, 220, 0.25, { type: "sawtooth", gain: 0.05, slideTo: 520 }); },
+  hit(win = true) { if (!ok()) return; const t = now(); noise(t, 0.16, { type: "lowpass", f0: 1400, f1: 200, gain: 0.4 }); tone(t, win ? 150 : 260, 0.2, { type: "square", gain: 0.16, slideTo: win ? 55 : 200 }); if (!win) tone(t + 0.05, 1400, 0.12, { type: "triangle", gain: 0.08 }); },
+  ko() { if (!ok()) return; const t = now(); noise(t, 0.5, { type: "bandpass", f0: 2500, f1: 300, q: 0.7, gain: 0.25 }); tone(t, 330, 0.5, { type: "sawtooth", gain: 0.08, slideTo: 70 }); },
+  ceo() { if (!ok()) return; const t = now(); noise(t, 0.3, { type: "lowpass", f0: 900, f1: 120, gain: 0.5 }); tone(t, 110, 0.5, { type: "sine", gain: 0.3, slideTo: 40 }); bell(t + 0.06, 523, 0.7, 0.12); },
   tap() { if (!ok()) return; tone(now(), 880, 0.08, { type: "triangle", gain: 0.06, slideTo: 660 }); },
 };
 
