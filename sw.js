@@ -1,6 +1,6 @@
 // Service worker : jeu jouable hors ligne (appli installée sur PC, tablette, téléphone).
-const VERSION = "gmtcg-v3";
-const SHELL = ["./", "index.html", "css/style.css", "js/app.js", "js/state.js", "js/cards.js", "js/cards-data.js",
+const VERSION = "gmtcg-v4";
+const SHELL = ["./", "index.html", "css/style.css", "js/app.js", "js/state.js", "js/cards.js", "js/cards-data.js", "js/cardview.js", "js/duel-ui.js", "js/engine/core.js", "js/engine/effects.js", "js/engine/ai.js", "js/engine/deck.js",
   "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png"];
 
 self.addEventListener("install", (e) => {
@@ -13,7 +13,7 @@ self.addEventListener("activate", (e) => {
 self.addEventListener("fetch", (e) => {
   const url = new URL(e.request.url);
   if (e.request.method !== "GET" || url.origin !== location.origin) return;
-  if (url.pathname.includes("/cartes/")) {
+  if (url.pathname.includes("/cartes/") || url.pathname.includes("/boosters/")) {
     // Images des cartes : cache d'abord (elles ne changent pas).
     e.respondWith(caches.match(e.request).then((hit) => hit || fetch(e.request).then((res) => {
       const copy = res.clone(); caches.open(VERSION).then((c) => c.put(e.request, copy)); return res;

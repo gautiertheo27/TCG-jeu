@@ -33,12 +33,16 @@
     <!-- BOOSTERS -->
     <section id="tab-boosters" class="tab active">
       <div class="booster-zone">
+        <div class="pack-wrap">
         <button id="boosterPack" class="pack" aria-label="Ouvrir un booster">
+          <img id="packArt" class="pack-art hidden" alt="" draggable="false">
           <span class="pack-shine"></span>
           <span class="pack-logo">GM</span>
           <span class="pack-title">GENTLE MATES TCG</span>
           <span class="pack-sub" id="packSize">10 cartes</span>
         </button>
+        <div id="packPicker" class="pack-picker hidden" aria-label="Choisir le design du booster"></div>
+        </div>
         <div class="booster-info">
           <p class="big"><span id="stockBig">0</span> booster(s) disponible(s)</p>
           <p id="nextTimer" class="muted">Prochain booster dans --:--</p>
@@ -86,18 +90,35 @@
     <!-- DUEL -->
     <section id="tab-duel" class="tab">
       <div id="duelSetup">
-        <h2>Duel contre l'IA</h2>
-        <p class="muted">Choisis <strong>5 cartes Joueur</strong>. Chaque manche, les deux Joueurs se frappent avec leur meilleure attaque :
-          celui qui retire la plus grande part de la Def adverse gagne la manche. Victoire = +1 booster (3 par jour max) et 15 % de chance d'obtenir une carte Promo.</p>
-        <div class="btn-row"><button id="duelAuto" class="btn">Sélection auto</button><button id="duelStart" class="btn primary" disabled>Lancer le duel (0/5)</button></div>
-        <div id="duelPick" class="grid small-grid"></div>
+        <h2>Duel — règles officielles</h2>
+        <p class="muted">Tu incarnes le CEO d'un club. Gagne en touchant le CEO adverse quand il n'a plus de Point de Victoire, ou si l'adversaire ne peut plus piocher.
+          Club de 40 cartes, Réserve de 10 Essences, 3 cases de Terrain, 4 PV, 5 cartes en main max. Voir les
+          <a href="https://www.gentlemates.com/tcg/regles-du-jeu.pdf" target="_blank" rel="noopener">règles officielles</a>.</p>
+        <div class="filters duel-form">
+          <label>Couleur 1 <select id="dcol1"></select></label>
+          <label>Couleur 2 <select id="dcol2"></select></label>
+          <label>Cartes du deck
+            <select id="dsrc"><option value="full">Set complet (entraînement)</option><option value="collection">Ma collection</option></select></label>
+        </div>
+        <p id="dsrcNote" class="muted small"></p>
+        <div class="btn-row"><button id="duelStart" class="btn primary">Lancer le duel</button></div>
+        <p class="muted small">Victoire = +1 booster (3 par jour max) et 15 % de chance d'obtenir une carte Promo. Les Objets, Coachs et Moments demandent une Essence de leur couleur sur le Terrain.</p>
       </div>
       <div id="duelBoard" class="hidden">
-        <div class="score"><span>Toi <b id="sMe">0</b></span><span class="muted" id="roundLbl">Manche 1/5</span><span><b id="sAi">0</b> IA</span></div>
-        <div class="arena"><div id="slotAi" class="slot"></div><div id="duelMsg" class="duel-msg">Joue une carte</div><div id="slotMe" class="slot"></div></div>
-        <div id="hand" class="hand"></div>
-        <div class="btn-row center"><button id="duelAgain" class="btn primary hidden">Rejouer</button></div>
+        <div class="bd-phase"><span id="bdPhase"></span>
+          <span class="bd-actions"><button id="btnCombat" class="btn hidden">⚔ Phase de combat</button><button id="btnEnd" class="btn primary hidden">Passer le tour ▶</button></span></div>
+        <div class="bd-info" id="bdOpp"></div>
+        <div class="bd-ess" id="bdEssOpp"></div>
+        <div class="bd-lanes" id="bdLanesOpp"></div>
+        <div class="bd-sep"></div>
+        <div class="bd-lanes" id="bdLanesMe"></div>
+        <div class="bd-ess" id="bdEssMe"></div>
+        <div class="bd-info" id="bdMe"></div>
+        <div class="bd-hand" id="bdHand"></div>
+        <div id="duelEnd" class="duel-end hidden"><p id="duelEndMsg"></p><button id="duelAgain" class="btn primary">Rejouer</button></div>
+        <details class="bd-logbox" open><summary>Journal</summary><div id="bdLog" class="bd-log"></div></details>
       </div>
+      <div id="duelModal" class="modal hidden"></div>
     </section>
 
     <!-- PROFIL -->

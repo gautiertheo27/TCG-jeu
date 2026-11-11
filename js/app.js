@@ -1,23 +1,9 @@
 import { CARDS, BY_ID, RARITIES, COLORS, SET, PACK_SLOTS, PACK_SIZE, MISSING } from "./cards.js";
 import * as S from "./state.js";
+import { cardHTML, placeholderHTML, esc } from "./cardview.js";
+import { initDuel } from "./duel-ui.js";
 
 const $ = (s) => document.querySelector(s);
-const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-
-// ---------- Rendu d'une carte (image officielle) ----------
-export function cardHTML(card, { holo = false, hidden = false } = {}) {
-  const r = RARITIES[card.rarity];
-  if (hidden) {
-    return `<div class="card card-hidden" data-r="${card.rarity}" style="--rc:${r.color}">
-      <div class="ph"><span class="ph-num">${esc(card.label)}</span><span class="ph-rar">${r.symbol} ${r.name}</span></div></div>`;
-  }
-  return `<div class="card${holo ? " holo" : ""}" data-r="${card.rarity}" style="--rc:${r.color}">
-    <img src="${esc(card.img)}" alt="${esc(card.name)}" loading="lazy" draggable="false"></div>`;
-}
-function placeholderHTML(n) {
-  const label = `${String(n).padStart(3, "0")}/${SET.total}`;
-  return `<div class="cell missing soon"><div class="card card-hidden"><div class="ph"><span class="ph-num">${label}</span><span class="ph-rar">À venir</span></div></div></div>`;
-}
 
 // ---------- Navigation ----------
 document.querySelectorAll(".tabs button").forEach((b) =>
@@ -41,6 +27,27 @@ $("#packSize").textContent = `${PACK_SIZE} cartes`;
 $("#odds").innerHTML = PACK_SLOTS.map((sl) => `<tr><td>${sl.count}× ${sl.label}${sl.foil ? " ✨" : ""}</td><td>${
   sl.table.map(([r, p]) => `<span style="color:${RARITIES[r].color}">${RARITIES[r].symbol} ${RARITIES[r].name}</span> ${+(p * 100).toFixed(1)} %`).join("<br>")}</td></tr>`).join("");
 $("#maxStock").textContent = Number.isFinite(S.MAX_STOCK) ? S.MAX_STOCK : "∞";
+
+// Designs des boosters (images fournies dans src/boosters/). Sans images, le booster CSS reste affiché.
+const BOOSTER_ART = ["boosters/1.webp", "boosters/2.webp", "boosters/3.webp", "boosters/4.webp"];
+let packIdx = 0;
+try { packIdx = Math.min(BOOSTER_ART.length - 1, +localStorage.getItem("gmtcg.pack") || 0); } catch (_) {}
+function setPack(i) {
+  packIdx = i; try { localStorage.setItem("gmtcg.pack", i); } catch (_) {}
+  $("#packArt").src = BOOSTER_ART[i];
+  document.querySelectorAll("#packPicker button").forEach((b, k) => b.classList.toggle("on", k === i));
+}
+(function initPacks() {
+  const img = $("#packArt");
+  img.addEventListener("load", () => {
+    img.classList.remove("hidden"); $("#boosterPack").classList.add("has-art");
+    $("#packPicker").classList.remove("hidden");
+  });
+  img.addEventListener("error", () => { img.classList.add("hidden"); $("#boosterPack").classList.remove("has-art"); $("#packPicker").classList.add("hidden"); });
+  $("#packPicker").innerHTML = BOOSTER_ART.map((src, i) => `<button type="button" aria-label="Booster ${i + 1}"><img src="${src}" alt="" draggable="false"></button>`).join("");
+  document.querySelectorAll("#packPicker button").forEach((b, i) => b.addEventListener("click", () => setPack(i)));
+  setPack(packIdx);
+})();
 
 function fmt(ms) {
   const s = Math.ceil(ms / 1000), m = Math.floor(s / 60), sec = s % 60;
@@ -155,89 +162,9 @@ $("#zoom").addEventListener("pointermove", (e) => {
 });
 document.addEventListener("keydown", (e) => { if (e.key === "Escape") $("#zoom").classList.add("hidden"); });
 
-// ---------- Duel ----------
-let picked = [];
-const isPlayer = (c) => c.category === "Joueur" && c.def;
-function ownedCards() { return CARDS.filter((c) => isPlayer(c) && S.owned(c.id) > 0); }
-
-function renderDuelSetup() {
-  $("#duelSetup").classList.remove("hidden"); $("#duelBoard").classList.add("hidden");
-  const mine = ownedCards();
-  picked = picked.filter((id) => S.owned(id) > 0);
-  if (mine.length < 5) {
-    $("#duelPick").innerHTML = `<p class="muted">Il te faut au moins 5 cartes Joueur différentes (tu en as ${mine.length}). Ouvre des boosters !</p>`;
-  } else {
-    $("#duelPick").innerHTML = mine.sort((a, b) => b.power - a.power).map((c) =>
-      `<div class="cell${picked.includes(c.id) ? " selected" : ""}" data-id="${c.id}">${cardHTML(c)}</div>`).join("");
-  }
-  updateDuelBtn();
-}
-function updateDuelBtn() { $("#duelStart").disabled = picked.length !== 5; $("#duelStart").textContent = `Lancer le duel (${picked.length}/5)`; }
-$("#duelPick").addEventListener("click", (e) => {
-  const cell = e.target.closest(".cell"); if (!cell) return;
-  const id = cell.dataset.id;
-  if (picked.includes(id)) picked = picked.filter((x) => x !== id);
-  else if (picked.length < 5) picked.push(id);
-  else { toast("5 cartes maximum"); return; }
-  cell.classList.toggle("selected", picked.includes(id)); updateDuelBtn();
-});
-$("#duelAuto").addEventListener("click", () => {
-  picked = ownedCards().sort((a, b) => b.power - a.power).slice(0, 5).map((c) => c.id); renderDuelSetup();
-});
-
-let duel;
-$("#duelStart").addEventListener("click", startDuel);
-$("#duelAgain").addEventListener("click", renderDuelSetup);
-
-function startDuel() {
-  const hand = picked.map((id) => BY_ID[id]);
-  const avg = hand.reduce((s, c) => s + c.power, 0) / 5;
-  // L'IA prend 5 cartes de puissance proche de la moyenne du joueur
-  const pool = CARDS.filter(isPlayer).sort(() => Math.random() - 0.5).sort((a, b) => Math.abs(a.power - avg) - Math.abs(b.power - avg));
-  const ai = pool.slice(0, 9).sort(() => Math.random() - 0.5).slice(0, 5);
-  duel = { hand, ai, me: 0, opp: 0, round: 0, lock: false };
-  $("#duelSetup").classList.add("hidden"); $("#duelBoard").classList.remove("hidden"); $("#duelAgain").classList.add("hidden");
-  $("#slotAi").innerHTML = ""; $("#slotMe").innerHTML = ""; $("#duelMsg").textContent = "Joue une carte";
-  renderHand(); updateScore();
-}
-function renderHand() {
-  $("#hand").innerHTML = duel.hand.map((c, i) => `<div class="cell" data-i="${i}">${cardHTML(c)}</div>`).join("");
-}
-function updateScore() {
-  $("#sMe").textContent = duel.me; $("#sAi").textContent = duel.opp;
-  $("#roundLbl").textContent = `Manche ${Math.min(duel.round + 1, 5)}/5`;
-}
-// Chaque Joueur frappe avec sa meilleure attaque : on compare la part de Def adverse retirée.
-function strength(a, b) { return Math.round((a.power / b.def) * 100); }
-
-$("#hand").addEventListener("click", (e) => {
-  const cell = e.target.closest(".cell"); if (!cell || duel.lock) return;
-  duel.lock = true;
-  const mine = duel.hand.splice(+cell.dataset.i, 1)[0];
-  const theirs = duel.ai.shift();
-  $("#slotMe").innerHTML = cardHTML(mine); $("#slotAi").innerHTML = ""; renderHand();
-  $("#duelMsg").textContent = "…";
-  setTimeout(() => {
-    $("#slotAi").innerHTML = cardHTML(theirs);
-    const a = strength(mine, theirs), b = strength(theirs, mine);
-    let msg = a > b ? "Manche gagnée !" : a < b ? "Manche perdue" : "Égalité";
-    if (a > b) duel.me++; else if (b > a) duel.opp++;
-    const ko = [mine.power >= theirs.def ? "K.O. adverse !" : "", theirs.power >= mine.def ? "Ton Joueur est K.O." : ""].filter(Boolean).join(" · ");
-    $("#duelMsg").innerHTML = `${mine.power} → Def ${theirs.def} (${a} %)<br>${theirs.power} → Def ${mine.def} (${b} %)<br>${msg}${ko ? `<span class="bonus">${ko}</span>` : ""}`;
-    duel.round++; updateScore(); duel.lock = false;
-    if (duel.round === 5) endDuel();
-  }, 600);
-});
-function endDuel() {
-  duel.lock = true;
-  const won = duel.me > duel.opp;
-  const { rewarded, promo } = S.recordDuel(won);
-  setTimeout(() => {
-    $("#duelMsg").innerHTML = won ? `🏆 Victoire ${duel.me}-${duel.opp} !${rewarded ? '<span class="bonus">+1 booster</span>' : '<span class="bonus">Récompenses du jour épuisées</span>'}${promo ? `<span class="bonus">🎉 Carte promo : ${esc(promo.name)} (${promo.label})</span>` : ""}`
-      : duel.me === duel.opp ? `Match nul ${duel.me}-${duel.opp}` : `Défaite ${duel.me}-${duel.opp}`;
-    $("#duelAgain").classList.remove("hidden"); tick();
-  }, 900);
-}
+// ---------- Duel (règles officielles) ----------
+const duelUI = initDuel({ S, toast, tick, esc });
+function renderDuelSetup() { duelUI.showSetup(); }
 
 // ---------- Profil ----------
 function renderProfile() {
@@ -256,7 +183,7 @@ $("#btnImport").addEventListener("click", () => {
   catch { toast("Code de sauvegarde invalide"); }
 });
 $("#btnReset").addEventListener("click", () => {
-  if (confirm("Effacer toute ta progression ?")) { S.reset(); picked = []; tick(); renderProfile(); toast("Progression réinitialisée"); }
+  if (confirm("Effacer toute ta progression ?")) { S.reset(); tick(); renderProfile(); toast("Progression réinitialisée"); }
 });
 
 // ---------- Appli installable (PWA) ----------
