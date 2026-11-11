@@ -256,6 +256,7 @@ async function onSession(sess) {
     const st = await api.getState(); session = sess; S.enterRemote(api, st); closeModal(); refreshAll();
     const local = S.localSnapshot(), n = Object.keys(local.collection || {}).length;
     if (n > 0 && !st.imported && !Object.keys(st.collection).length && !st.stats.opened) offerImport(local, n);
+    else if (st.welcome) toast(`🎁 Bienvenue ${st.profile?.username || ""} ! 10 boosters offerts`);
     else toast(`Connecté : ${st.profile?.username || "joueur"}`);
   } catch (e) { console.error(e); if (required) gateError(e.message); else toast("Connexion au serveur impossible : " + e.message); }
 }
