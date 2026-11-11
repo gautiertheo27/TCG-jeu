@@ -2,7 +2,7 @@
 import { BY_ID, COLORS, CARDS } from "./cards.js";
 import { Game, C, spec, hasResilience } from "./engine/core.js";
 import { aiAnswer, aiTurn } from "./engine/ai.js";
-import { autoDeck, validateDeck } from "./engine/deck.js";
+import { autoDeck, validateDeck, PRESETS, buildPreset } from "./engine/deck.js";
 import { cardHTML } from "./cardview.js";
 
 const $ = (s, r = document) => r.querySelector(s);
@@ -17,23 +17,46 @@ export function initDuel({ S, toast, tick, esc }) {
   // ---------- écran de préparation ----------
   for (const sel of ["#dcol1", "#dcol2"]) ALL_COLORS.forEach((c) => $(sel).insertAdjacentHTML("beforeend", `<option>${c}</option>`));
   $("#dcol1").value = "Rose"; $("#dcol2").value = "Mauve";
+  $("#dsrc").innerHTML = PRESETS.map((p) => `<option value="preset:${p.id}">Prêté · ${esc(p.name)}</option>`).join("") + '<option value="collection">Mon deck (ma collection)</option>';
+  $("#dsrc").addEventListener("change", updateNote);
   $("#duelStart").addEventListener("click", start);
   $("#duelAgain").addEventListener("click", showSetup);
+  $("#duelPreview").addEventListener("click", previewDeck);
+
+  function chosenDeck() {
+    const v = $("#dsrc").value;
+    if (v === "collection") {
+      const colors = [...new Set([$("#dcol1").value, $("#dcol2").value])];
+      return { deck: autoDeck(colors, S.get().collection), custom: true };
+    }
+    return { deck: buildPreset(v.slice(7)), custom: false };
+  }
+  function updateNote() {
+    const v = $("#dsrc").value, coll = v === "collection";
+    $("#dcolBox1").classList.toggle("hidden", !coll); $("#dcolBox2").classList.toggle("hidden", !coll);
+    if (coll) $("#dsrcNote").textContent = `Ta collection : ${Object.keys(S.get().collection).length} cartes différentes. Il faut 40 cartes (3 exemplaires max chacune) et 10 Essences des couleurs choisies.`;
+    else { const p = PRESETS.find((x) => "preset:" + x.id === v); $("#dsrcNote").textContent = `${p.blurb} Cartes prêtées pour la manche.`; }
+  }
+  function previewDeck() {
+    const { deck } = chosenDeck();
+    const count = {}; for (const id of [...deck.club, ...deck.reserve]) count[id] = (count[id] || 0) + 1;
+    const ids = Object.keys(count).sort((a, b) => BY_ID[a].n - BY_ID[b].n);
+    openModal(`<h3>${esc(deck.name || "Ton deck")} · ${deck.club.length} cartes + ${deck.reserve.length} Essences</h3>
+      <div class="pick-row">${ids.map((id) => `<div class="pick">${cardHTML(BY_ID[id])}<small>×${count[id]}</small></div>`).join("")}</div>
+      <div class="btn-col"><button class="btn" data-close>Fermer</button></div>`);
+  }
 
   function showSetup() {
-    setup.classList.remove("hidden"); board.classList.add("hidden"); g = null;
-    const have = Object.keys(S.get().collection).length;
-    $("#dsrcNote").textContent = `Ma collection : ${have} cartes différentes. Il faut 40 cartes (3 exemplaires max chacune) et 10 Essences.`;
+    setup.classList.remove("hidden"); board.classList.add("hidden"); g = null; updateNote();
   }
 
   async function start() {
-    const colors = [...new Set([$("#dcol1").value, $("#dcol2").value])];
-    const source = $("#dsrc").value;
-    const mine = autoDeck(colors, source === "collection" ? S.get().collection : null);
+    const { deck: mine, custom } = chosenDeck();
     if (mine.club.length < 40 || mine.reserve.length < 10) {
-      toast(`Collection insuffisante pour ces couleurs : ${mine.club.length}/40 cartes, ${mine.reserve.length}/10 Essences. Ouvre des boosters ou choisis « Set complet ».`); return;
+      toast(`Collection insuffisante : ${mine.club.length}/40 cartes, ${mine.reserve.length}/10 Essences. Ouvre des boosters ou choisis un deck prêté.`); return;
     }
-    const theirs = autoDeck(AI_PAIRS[Math.floor(Math.random() * AI_PAIRS.length)]);
+    const others = PRESETS.filter((p) => p.id !== mine.preset);
+    const theirs = buildPreset(others[Math.floor(Math.random() * others.length)].id);
     logs = []; $("#bdLog").innerHTML = "";
     g = new Game({
       decks: [mine, theirs], names: ["Toi", "Adversaire"], ai: [0, 1],
@@ -41,6 +64,7 @@ export function initDuel({ S, toast, tick, esc }) {
       onUpdate: render, log: addLog,
     });
     window.__gmGame = g;
+    addLog(custom ? "Tu joues avec les cartes de ta collection." : `Tu joues avec « ${mine.name} » (cartes prêtées pour la manche).`);
     setup.classList.add("hidden"); board.classList.remove("hidden"); $("#duelEnd").classList.add("hidden");
     render(g); await loop();
   }
@@ -217,5 +241,6 @@ export function initDuel({ S, toast, tick, esc }) {
     });
   }
 
+  updateNote();
   return { showSetup };
 }

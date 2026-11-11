@@ -34,3 +34,38 @@ export function autoDeck(colors, stock = null) {
   return { club, reserve, colors };
 }
 export const COLOR_PAIRS = [["Rose", "Orange"], ["Violette", "Mauve"], ["Mauve", "Bleue"], ["Rose", "Mauve"], ["Orange", "Violette"], ["Verte", "Rose"], ["Azur", "Mauve"], ["Jaune", "Mauve"]];
+
+// ---------- Decks prêtés (préconstruits) ----------
+// Des decks « corrects » : uniquement Communes / Peu communes / Rares (pas d'Épique, de Légendaire ni de Promo),
+// 2 exemplaires maximum par carte, 16 à 18 Joueurs. Les cartes sont prêtées pour la manche : elles ne rejoignent pas ta collection.
+export const PRESETS = [
+  { id: "tempo", name: "Tempo Rose-Orange", colors: ["Rose", "Orange"], seed: 11, blurb: "Des Joueurs pas chers qui frappent vite, avec quelques Objets à lier." },
+  { id: "controle", name: "Contrôle Violette-Mauve", colors: ["Violette", "Mauve"], seed: 23, blurb: "Désengager, échanger et bencher : on contrôle le rythme de la partie." },
+  { id: "bagarre", name: "Bagarre Mauve-Bleue", colors: ["Mauve", "Bleue"], seed: 37, blurb: "Des Joueurs solides et des Moments qui retournent les Essences adverses." },
+  { id: "mix", name: "Mix Rose-Mauve", colors: ["Rose", "Mauve"], seed: 41, blurb: "Un peu de tout : Buff, Légion et pioche pour tenir sur la durée." },
+  { id: "objets", name: "Objets Orange-Violette", colors: ["Orange", "Violette"], seed: 53, blurb: "Des Joueurs renforcés par des Objets liés et des Ripostes." },
+  { id: "azur", name: "Combos Azur-Mauve", colors: ["Azur", "Mauve"], seed: 67, blurb: "Des Joueurs interchangeables et beaucoup de cartes neutres faciles à jouer." },
+];
+const rng = (seed) => () => { seed = (seed + 0x6d2b79f5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+
+export function buildPreset(id) {
+  const P = PRESETS.find((p) => p.id === id) || PRESETS[0];
+  const rnd = rng(P.seed);
+  const pool = CARDS.filter((c) => ["C", "PC", "R"].includes(c.rarity) && c.category !== "Essence" && !c.id.startsWith("P") && (c.color === "Neutre" || P.colors.includes(c.color)));
+  const dedup = {}; for (const c of pool) dedup[sameCard(c)] = dedup[sameCard(c)] || c;
+  const unique = Object.values(dedup).sort(() => rnd() - 0.5);
+  // On privilégie les Joueurs d'attaque peu chère, comme le conseillent les règles.
+  const cheap = (c) => (c.attacks?.length ? Math.min(...c.attacks.map((a) => (a.cost || []).length)) : 9);
+  const joueurs = unique.filter((c) => c.category === "Joueur").sort((a, b) => cheap(a) - cheap(b) + (rnd() - 0.5) * 2);
+  const autres = unique.filter((c) => c.category !== "Joueur");
+  const club = []; const n = {};
+  const add = (c, max) => { const k = sameCard(c); if (club.length >= 40 || (n[k] || 0) >= max) return; n[k] = (n[k] || 0) + 1; club.push(c.id); };
+  for (const c of joueurs.slice(0, 9)) { add(c, 2); add(c, 2); }                      // 18 Joueurs
+  for (const c of autres.filter((x) => x.category === "Objet").slice(0, 4)) add(c, 2); // quelques Objets
+  for (const c of autres.filter((x) => x.category !== "Objet")) { if (club.length >= 38) break; add(c, 2); }
+  for (const c of [...joueurs.slice(9), ...autres]) add(c, 1);                          // complète sans dépasser 2 exemplaires
+  for (const c of unique) add(c, 2);
+  const byColor = P.colors.map((col) => CARDS.filter((c) => c.category === "Essence" && c.color === col)[0].id);
+  const reserve = Array.from({ length: 10 }, (_, i) => byColor[i % byColor.length]);
+  return { club, reserve, colors: P.colors, name: P.name, preset: P.id };
+}

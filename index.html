@@ -95,14 +95,15 @@
           Club de 40 cartes, Réserve de 10 Essences, 3 cases de Terrain, 4 PV, 5 cartes en main max. Voir les
           <a href="https://www.gentlemates.com/tcg/regles-du-jeu.pdf" target="_blank" rel="noopener">règles officielles</a>.</p>
         <div class="filters duel-form">
-          <label>Couleur 1 <select id="dcol1"></select></label>
-          <label>Couleur 2 <select id="dcol2"></select></label>
-          <label>Cartes du deck
-            <select id="dsrc"><option value="full">Set complet (entraînement)</option><option value="collection">Ma collection</option></select></label>
+          <label>Ton deck
+            <select id="dsrc"></select></label>
+          <label id="dcolBox1" class="hidden">Couleur 1 <select id="dcol1"></select></label>
+          <label id="dcolBox2" class="hidden">Couleur 2 <select id="dcol2"></select></label>
         </div>
         <p id="dsrcNote" class="muted small"></p>
+        <div class="btn-row"><button id="duelPreview" class="btn">👁 Voir les cartes du deck</button></div>
         <div class="btn-row"><button id="duelStart" class="btn primary">Lancer le duel</button></div>
-        <p class="muted small">Victoire = +1 booster (3 par jour max) et 15 % de chance d'obtenir une carte Promo. Les Objets, Coachs et Moments demandent une Essence de leur couleur sur le Terrain.</p>
+        <p class="muted small">Les decks préconstruits sont <b>prêtés pour la manche</b> : ce sont de bons decks de départ, sans carte Épique ni Légendaire, et leurs cartes ne rejoignent pas ta collection. Victoire = +1 booster (3 par jour max) et 15 % de chance d'obtenir une carte Promo. Les Objets, Coachs et Moments demandent une Essence de leur couleur sur le Terrain.</p>
       </div>
       <div id="duelBoard" class="hidden">
         <div class="bd-phase"><span id="bdPhase"></span>
