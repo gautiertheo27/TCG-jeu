@@ -411,3 +411,21 @@ body.no-scroll { overflow: hidden; }
 .fri-btns { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
 .btn.sm { padding: 5px 10px; font-size: .82rem; min-height: 32px; }
 #tab-amis h3 { margin-top: 1.2em; }
+
+/* ---------- Plateau agrandi sur PC : plateau à gauche, main + journal à droite ---------- */
+@media (min-width: 1100px) {
+  main { max-width: 1500px; }
+  #duelBoard:not(.hidden) { display: grid; grid-template-columns: minmax(0, 860px) 360px; gap: 22px; justify-content: center; align-items: start; }
+  #duelBoard .playmat { grid-column: 1; grid-row: 1 / span 5; max-width: min(860px, calc((100vh - 120px) * 0.78)); width: 100%; margin: 0 auto; }
+  #duelBoard .bd-controls, #duelBoard .bd-hand, #duelBoard .duel-end, #duelBoard .bd-logbox { grid-column: 2; max-width: none; margin-left: 0; margin-right: 0; }
+  #duelBoard .bd-controls { position: static; justify-content: flex-start; padding: 0; }
+  #duelBoard .bd-actions { flex-wrap: wrap; } #duelBoard .bd-actions .btn { flex: 1; }
+  #duelBoard .bd-hand { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 14px 2px 4px; overflow: visible; justify-content: stretch; margin: 4px 0; }
+  #duelBoard .hcard { width: 100%; margin-left: 0; }
+  #duelBoard .hcard.playable { transform: translateY(-4px); }
+  #duelBoard .bd-logbox { margin-top: 4px; } #duelBoard .bd-log { max-height: 260px; }
+  .mat { grid-template-columns: 72px minmax(0, 1fr) 72px; gap: 8px; }
+  .lane-info { font-size: .78rem; } .zlabel, .plabel { font-size: .66rem; } .pcount { font-size: .75rem; } .ess { width: 22px; height: 22px; }
+  .arena-bar, .pm-bar { font-size: .95rem; }
+}
+@media (min-width: 1100px) and (max-height: 820px) { #duelBoard .playmat { max-width: min(860px, calc((100vh - 120px) * 0.78)); } }
