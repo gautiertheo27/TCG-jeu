@@ -80,25 +80,22 @@ function tick() {
   $("#rule").textContent = `Glisse sur le haut du paquet (ou touche-le) pour l'ouvrir. 1 booster toutes les ${mins} minutes, ${Number.isFinite(max) ? max : "illimités"} en stock au maximum.`;
   const busy = isOpening();
   $("#openOne").disabled = st <= 0 || busy;
-  $("#openAll").disabled = st <= 1 || busy;
   $("#boosterPack").classList.toggle("empty", st <= 0);
 }
 
 async function openPacks(count) {
   if (isOpening()) return;
-  const quick = count > 1;                       // « Tout ouvrir » : récap direct, sans animation
   const pulls = [];
-  for (let i = 0; i < Math.min(count, 12); i++) { const p = await S.openBooster().catch((e) => { toast("Erreur serveur : " + e.message); return null; }); if (!p) break; pulls.push(...p); }
+  for (let i = 0; i < count; i++) { const p = await S.openBooster().catch((e) => { toast("Erreur serveur : " + e.message); return null; }); if (!p) break; pulls.push(...p); }
   if (!pulls.length) { toast("Plus de booster : reviens dans quelques minutes !"); return; }
   tick();
-  const { again } = await playOpening({ pulls, packSrc: BOOSTER_ART[packIdx], quick, canAgain: S.get().stock > 0 });
+  const { again } = await playOpening({ pulls, packSrc: BOOSTER_ART[packIdx], canAgain: S.get().stock > 0 });
   tick(); window.scrollTo({ top: 0 });
   if (again) openPacks(1);
 }
 
 $("#boosterPack").addEventListener("click", () => openPacks(1));
 $("#openOne").addEventListener("click", () => openPacks(1));
-$("#openAll").addEventListener("click", () => openPacks(S.get().stock));
 
 // ---------- Collection ----------
 const fR = $("#fRarity");
