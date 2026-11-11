@@ -3,6 +3,7 @@
 // 3) on les retourne et on les écarte une à une (dans l'ordre réel du paquet), 4) récap de toutes les cartes.
 import { BY_ID, RARITIES } from "./cards.js";
 import { cardHTML, esc } from "./cardview.js";
+import { sfx, unlock } from "./sound.js";
 
 const $ = (s, r = document) => r.querySelector(s);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -13,6 +14,7 @@ export function isOpening() { return !$("#opening").classList.contains("hidden")
 
 // pulls : [{ id, holo, isNew }], packSrc : image du paquet, opts.quick : saute l'animation (récap seulement)
 export async function playOpening({ pulls, packSrc, quick = false, canAgain = false }) {
+  unlock();
   const root = $("#opening");
   root.classList.remove("hidden"); document.body.classList.add("no-scroll");
   root.innerHTML = `
@@ -41,6 +43,7 @@ export async function playOpening({ pulls, packSrc, quick = false, canAgain = fa
     q(".op-stage").classList.add("hidden"); q(".op-hint").classList.add("hidden"); q(".op-count").classList.add("hidden"); q(".op-skip").classList.add("hidden");
     const nNew = pulls.filter((p) => p.isNew).length;
     const best = pulls.reduce((b, p) => (RARITIES[BY_ID[p.id].rarity].order > RARITIES[BY_ID[b.id].rarity].order ? p : b), pulls[0]);
+    sfx.fanfare(BY_ID[best.id].rarity);
     const el = q(".op-summary"); el.classList.remove("hidden");
     el.innerHTML = `<h2>${pulls.length > 10 ? `${pulls.length / 10} boosters ouverts` : "Booster ouvert !"}</h2>
       <p class="muted">${nNew ? `<b>${nNew}</b> nouvelle${nNew > 1 ? "s" : ""} carte${nNew > 1 ? "s" : ""} · ` : ""}Plus belle carte : ${esc(BY_ID[best.id].name)} (${RARITIES[BY_ID[best.id].rarity].name})</p>
@@ -72,6 +75,7 @@ export async function playOpening({ pulls, packSrc, quick = false, canAgain = fa
   let torn = false;
   const tear = async (fromDrag = 0) => {
     if (torn) return; torn = true;
+    sfx.tear();
     top.style.transition = "transform .55s cubic-bezier(.3,.7,.3,1), opacity .55s"; top.style.transform = "translate(130%, -90px) rotate(28deg)"; top.style.opacity = "0";
     cut.classList.add("hidden"); hint("");
     flash(false); await sleep(260);
@@ -115,6 +119,7 @@ export async function playOpening({ pulls, packSrc, quick = false, canAgain = fa
       el.style.animationDelay = `${(total - 1 - i) * 55}ms`;
       stack.appendChild(el); return el;
     });
+    pulls.forEach((_, i) => sfx.deal(i));
     hint("Touche la carte pour la retourner");
     updateCount(); arm();
   }
@@ -128,7 +133,7 @@ export async function playOpening({ pulls, packSrc, quick = false, canAgain = fa
     const flip = async () => {
       if (flipped || busy) return; busy = true; flipped = true;
       const c = BY_ID[pulls[idx].id];
-      el.classList.add("flipped"); try { navigator.vibrate?.(RARE.has(c.rarity) ? [20, 40, 30] : 10); } catch (_) {}
+      el.classList.add("flipped"); sfx.flip(c.rarity); try { navigator.vibrate?.(RARE.has(c.rarity) ? [20, 40, 30] : 10); } catch (_) {}
       await sleep(330);
       if (BIG.has(c.rarity)) { burst(el, RARITIES[c.rarity].color); flash(c.rarity !== "R"); root.classList.add("shake"); setTimeout(() => root.classList.remove("shake"), 450); }
       hint(idx === total - 1 ? "Touche pour voir le récapitulatif" : "Touche ou glisse pour passer à la suivante");
@@ -136,7 +141,7 @@ export async function playOpening({ pulls, packSrc, quick = false, canAgain = fa
     };
     const dismiss = async (dir) => {
       if (busy) return; busy = true;
-      el.style.transition = "transform .45s ease-in, opacity .45s"; el.style.transform = `translate(${dir * 130}vw, -40px) rotate(${dir * 24}deg)`; el.style.opacity = "0";
+      sfx.dismiss(); el.style.transition = "transform .45s ease-in, opacity .45s"; el.style.transform = `translate(${dir * 130}vw, -40px) rotate(${dir * 24}deg)`; el.style.opacity = "0";
       await sleep(380); el.remove(); idx++;
       if (idx >= total) { summary(); return; }
       updateCount(); hint("Touche la carte pour la retourner"); arm();

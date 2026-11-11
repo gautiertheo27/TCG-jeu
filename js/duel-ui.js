@@ -104,15 +104,15 @@ export function initDuel({ S, toast, tick, esc }) {
   }
 
   // ---------- rendu du plateau ----------
-  const tinyCard = (c, extra = "") => `<div class="mini ${extra}">${cardHTML(BY_ID[c.id])}</div>`;
+  const orbs = (n, max = 4) => Array.from({ length: max }, (_, i) => `<i class="orb${i < n ? " on" : ""}"></i>`).join("");
   function essencesHTML(pi) {
     const P = g.P(pi);
     return P.essences.map((e) => `<span class="ess${e.engaged ? " eng" : ""}" style="--ec:${COLORS[C(e.card).color]}" title="${esc(C(e.card).name)}${e.engaged ? " (engagée)" : ""}"></span>`).join("")
-      || '<span class="muted small">aucune Essence</span>';
+      || '<span class="ess-none">aucune Essence</span>';
   }
   function slotHTML(pi, lane) {
     const s = g.P(pi).lanes[lane];
-    if (!s) return `<div class="lane empty" data-pi="${pi}" data-lane="${lane}"><span>Case ${lane + 1}</span></div>`;
+    if (!s) return `<div class="lane empty" data-pi="${pi}" data-lane="${lane}"><span>${lane + 1}</span></div>`;
     const kws = [...g.keywords(s)].map((k) => `<span class="kw">${k[0] + k.slice(1).toLowerCase()}</span>`).join("");
     const objs = s.objets.map((o) => `<span class="obj" title="${esc(C(o).name)}">🔗</span>`).join("");
     const canAtk = pi === 0 && g.canAttack(0, s) && g.attackOptions(0, s).length;
@@ -120,14 +120,25 @@ export function initDuel({ S, toast, tick, esc }) {
       ${cardHTML(C(s))}
       <div class="lane-info"><b class="def">🛡 ${g.defense(s)}</b>${objs}${kws}${s.engaged ? '<span class="eng-badge">engagé</span>' : ""}</div></div>`;
   }
+  const pileHTML = (cls, label, n, top) => `<div class="pile ${cls}" data-pile="${cls}"><span class="plabel">${label}</span>
+    <div class="pcard${n ? "" : " empty"}">${top ? cardHTML(top) : '<div class="pback"><b>GM</b></div>'}<span class="pcount">${n}</span></div></div>`;
+  // Une moitié de plateau, comme le tapis officiel : PV et Réserve à gauche, Terrain et Essences au centre, Club et Défausse à droite.
+  function matHTML(pi) {
+    const P = g.P(pi), topDiscard = P.discard.length ? C(P.discard[P.discard.length - 1]) : null;
+    return `<div class="zone pvz"><span class="zlabel">Points de Victoire</span><div class="orbs">${orbs(P.pv.length)}</div></div>
+      <div class="zone terrain"><span class="ztab">Terrain</span><div class="bd-lanes">${[0, 1, 2].map((l) => slotHTML(pi, l)).join("")}</div></div>
+      <div class="zone right1">${pileHTML("club", "Club", P.club.length, null)}</div>
+      <div class="zone reservez">${pileHTML("reserve", "Réserve", P.reserve.length, null)}</div>
+      <div class="zone essz"><span class="ztab">Essences</span><div class="bd-ess">${essencesHTML(pi)}</div></div>
+      <div class="zone right2" data-pi="${pi}">${pileHTML("discard", "Défausse", P.discard.length, topDiscard)}</div>`;
+  }
+  const STEPS = [["entretien", "Entretien"], ["action", "Action"], ["combat", "Combat"], ["fin", "Fin"]];
   function render() {
     if (!g) return;
     const me = g.P(0), op = g.P(1), myTurn = g.active === 0 && g.winner === null;
-    $("#bdOpp").innerHTML = `<b>${esc(op.name)}</b> · ❤ PV ${op.pv.length} · ✋ ${op.hand.length} · 📚 Club ${op.club.length} · 🗑 ${op.discard.length}`;
-    $("#bdMe").innerHTML = `<b>Toi</b> · ❤ PV ${me.pv.length} · 📚 Club ${me.club.length} · 🗑 ${me.discard.length} · Réserve ${me.reserve.length}`;
-    $("#bdEssOpp").innerHTML = essencesHTML(1); $("#bdEssMe").innerHTML = essencesHTML(0);
-    $("#bdLanesOpp").innerHTML = [0, 1, 2].map((l) => slotHTML(1, l)).join("");
-    $("#bdLanesMe").innerHTML = [0, 1, 2].map((l) => slotHTML(0, l)).join("");
+    $("#bdOpp").innerHTML = `<b>${esc(op.name)}</b><span class="hand-backs">${Array.from({ length: op.hand.length }, () => "<i></i>").join("")}</span><span>✋ ${op.hand.length}</span>`;
+    $("#bdMe").innerHTML = `<b>Toi</b><span>✋ ${me.hand.length}/5</span><span>❤ PV ${me.pv.length}</span>`;
+    $("#matOpp").innerHTML = matHTML(1); $("#matMe").innerHTML = matHTML(0);
     $("#bdHand").innerHTML = me.hand.map((c, i) => {
       const ok = myTurn && !busy && g.phase === "action" && g.canPlay(0, c);
       return `<div class="hcard${ok ? " playable" : ""}" data-i="${i}">${cardHTML(C(c))}</div>`;
@@ -135,12 +146,20 @@ export function initDuel({ S, toast, tick, esc }) {
     const phaseName = g.winner !== null ? "Partie terminée" : { entretien: "Entretien", action: "Phase d'action", combat: "Phase de combat", fin: "Fin de tour", setup: "Mise en place" }[g.phase] || "";
     $("#bdPhase").textContent = `Tour ${g.turn} · ${myTurn ? "À toi" : "Adversaire"} · ${phaseName}`;
     $("#bdPhase").classList.toggle("mine", myTurn);
+    $("#bdSteps").innerHTML = STEPS.map(([k, l]) => `<i class="${g.phase === k && g.winner === null ? "on" : ""}">${l}</i>`).join("");
     const showCombat = myTurn && g.phase === "action" && g.turn > 1;
     $("#btnCombat").classList.toggle("hidden", !showCombat);
     $("#btnEnd").classList.toggle("hidden", !(myTurn && (g.phase === "action" || g.phase === "combat")));
     $("#btnEnd").textContent = g.phase === "combat" ? "Fin de tour ▶" : "Passer le tour ▶";
     $("#btnCombat").disabled = busy; $("#btnEnd").disabled = busy;
   }
+
+  // Défausse : toucher la pile pour voir les cartes (elles sont publiques)
+  board.addEventListener("click", (e) => {
+    const pile = e.target.closest('.pile[data-pile="discard"]'); if (!pile) return;
+    const pi = +pile.closest("[data-pi]").dataset.pi, cs = g.P(pi).discard;
+    openModal(`<h3>Défausse ${pi === 0 ? "(toi)" : "(adversaire)"} · ${cs.length} carte${cs.length > 1 ? "s" : ""}</h3>${cs.length ? `<div class="pick-row">${[...cs].reverse().map((c) => `<div class="pick">${cardHTML(C(c))}</div>`).join("")}</div>` : '<p class="muted">Vide.</p>'}<div class="btn-col"><button class="btn" data-close>Fermer</button></div>`);
+  });
 
   // ---------- actions du joueur ----------
   $("#btnCombat").addEventListener("click", () => { if (g.phase === "action" && !busy) { g.phase = "combat"; render(); } });

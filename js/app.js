@@ -3,9 +3,16 @@ import * as S from "./state.js";
 import { cardHTML, placeholderHTML, esc } from "./cardview.js";
 import { initDuel } from "./duel-ui.js";
 import { playOpening, isOpening } from "./opening.js";
+import { unlock, isMuted, setMuted, sfx } from "./sound.js";
 import { configured, initAccount, auth, api, providerLabel, enabledProviders } from "./account.js";
 
 const $ = (s) => document.querySelector(s);
+
+// ---------- Son ----------
+const syncSound = () => { $("#soundBtn").textContent = isMuted() ? "🔇" : "🔊"; };
+syncSound();
+$("#soundBtn").addEventListener("click", () => { unlock(); setMuted(!isMuted()); syncSound(); if (!isMuted()) sfx.tap(); });
+["pointerdown", "keydown"].forEach((ev) => window.addEventListener(ev, unlock, { once: false, passive: true }));
 
 // ---------- Navigation ----------
 document.querySelectorAll(".tabs button").forEach((b) =>
@@ -183,17 +190,23 @@ function refreshAll() {
   $("#accountBtn").textContent = session ? `👤 ${prof?.username || "Mon compte"}` : "👤 Se connecter";
   $("#saveBox").classList.toggle("hidden", S.isRemote());
 }
-function modal(html, wire) {
-  const m = $("#authModal"); m.innerHTML = `<div class="modal-box">${html}</div>`; m.classList.remove("hidden");
+// Compte obligatoire : tant que personne n'est connecté, la fenêtre de connexion bloque tout le jeu (« gate »).
+let required = false, locked = false;
+function modal(html, wire, lock = false) {
+  const m = $("#authModal"); locked = lock; m.classList.toggle("gate", lock);
+  m.innerHTML = `<div class="modal-box">${lock ? '<div class="gate-brand"><span class="logo">GM</span><div><strong>Gentle Mates TCG</strong><small>Connecte-toi pour jouer</small></div></div>' : ""}${html}</div>`; m.classList.remove("hidden");
   m.querySelectorAll("[data-close]").forEach((b) => b.addEventListener("click", closeModal)); wire?.(m);
 }
-function closeModal() { $("#authModal").classList.add("hidden"); $("#authModal").innerHTML = ""; }
-$("#authModal").addEventListener("click", (e) => { if (e.target.id === "authModal") closeModal(); });
+function closeModal() { $("#authModal").classList.add("hidden"); $("#authModal").classList.remove("gate"); $("#authModal").innerHTML = ""; locked = false; }
+$("#authModal").addEventListener("click", (e) => { if (e.target.id === "authModal" && !locked) closeModal(); });
+function gateLoading() { modal('<p class="center muted">Connexion en cours…</p>', null, true); }
+function gateError(msg) { modal(`<h3>Serveur injoignable</h3><p class="muted">${esc(msg || "Impossible de contacter le serveur du jeu.")}</p><div class="btn-row"><button class="btn primary" id="gateRetry">Réessayer</button></div>`, (m) => m.querySelector("#gateRetry").addEventListener("click", () => location.reload()), true); }
 const errText = (e) => ({ "Invalid login credentials": "E-mail ou mot de passe incorrect.", "User already registered": "Un compte existe déjà avec cet e-mail.",
   "Email not confirmed": "Confirme d'abord ton e-mail (regarde ta boîte de réception).", "Password should be at least 6 characters": "Mot de passe trop court (6 caractères minimum)." }[e.message] || e.message);
 
 const PROV_LABEL = { google: "Continuer avec Google", discord: "Continuer avec Discord" };
 async function showAuth(tab = "signin") {
+  const lock = required;
   const provs = window.__gmFakeSupabase ? ["google", "discord"] : await enabledProviders();
   const up = tab === "signup", reset = tab === "reset";
   modal(`<h3>${up ? "Créer un compte" : reset ? "Mot de passe oublié" : "Se connecter"}</h3>
@@ -206,7 +219,7 @@ async function showAuth(tab = "signin") {
       <button class="btn primary" type="submit">${up ? "Créer mon compte" : reset ? "Envoyer le lien" : "Connexion"}</button>
     </form><p id="authMsg" class="auth-msg"></p>
     <div class="auth-links">${up ? '<a href="#" data-tab="signin">J\'ai déjà un compte</a>' : reset ? '<a href="#" data-tab="signin">Retour</a>' : '<a href="#" data-tab="signup">Créer un compte</a><a href="#" data-tab="reset">Mot de passe oublié ?</a>'}
-    <a href="#" data-close>Continuer en invité</a></div>`, (m) => {
+    ${lock ? "" : '<a href="#" data-close>Continuer en invité</a>'}</div>`, (m) => {
     m.querySelectorAll("[data-tab]").forEach((a) => a.addEventListener("click", (e) => { e.preventDefault(); showAuth(a.dataset.tab); }));
     m.querySelectorAll("[data-oauth]").forEach((b) => b.addEventListener("click", () => auth.oauth(b.dataset.oauth).catch((e) => { m.querySelector("#authMsg").textContent = errText(e); })));
     const msg = m.querySelector("#authMsg");
@@ -215,10 +228,10 @@ async function showAuth(tab = "signin") {
       try {
         if (up) { const r = await auth.signUp(f.email, f.password, f.username.trim()); msg.textContent = r.needsConfirmation ? "Compte créé ! Clique sur le lien reçu par e-mail pour le confirmer." : "Compte créé ✔"; }
         else if (reset) { await auth.reset(f.email); msg.textContent = "Si un compte existe, un lien de réinitialisation vient d'être envoyé."; }
-        else { await auth.signIn(f.email, f.password); closeModal(); }
+        else { await auth.signIn(f.email, f.password); if (!lock) closeModal(); }
       } catch (err) { msg.textContent = errText(err); }
     });
-  });
+  }, lock);
 }
 function showRecovery() {
   modal(`<h3>Nouveau mot de passe</h3><form id="authForm" class="auth-form"><input name="password" type="password" placeholder="Nouveau mot de passe" minlength="6" required autocomplete="new-password"><button class="btn primary" type="submit">Enregistrer</button></form><p id="authMsg" class="auth-msg"></p>`, (m) => {
@@ -241,13 +254,13 @@ function renderAccount() {
 $("#accountBtn").addEventListener("click", () => (session ? (showTab("profil")) : showAuth()));
 
 async function onSession(sess) {
-  if (!sess) { session = null; S.leaveRemote(); refreshAll(); return; }
+  if (!sess) { session = null; S.leaveRemote(); refreshAll(); if (required) showAuth("signin"); return; }
   try {
-    const st = await api.getState(); session = sess; S.enterRemote(api, st); refreshAll();
+    const st = await api.getState(); session = sess; S.enterRemote(api, st); closeModal(); refreshAll();
     const local = S.localSnapshot(), n = Object.keys(local.collection || {}).length;
     if (n > 0 && !st.imported && !Object.keys(st.collection).length && !st.stats.opened) offerImport(local, n);
     else toast(`Connecté : ${st.profile?.username || "joueur"}`);
-  } catch (e) { console.error(e); toast("Connexion au serveur impossible : " + e.message); }
+  } catch (e) { console.error(e); if (required) gateError(e.message); else toast("Connexion au serveur impossible : " + e.message); }
 }
 function offerImport(local, n) {
   modal(`<h3>Importer ta progression d'invité ?</h3><p>Tu as <b>${n} cartes différentes</b> sur cet appareil. Elles peuvent être transférées <b>une seule fois</b> sur ton compte.</p>
@@ -257,10 +270,11 @@ function offerImport(local, n) {
 }
 (async function startAccounts() {
   const client = window.__gmFakeSupabase;            // hook de test : un faux client peut être injecté avant le chargement
-  if (!configured && !client) return;
+  if (!configured && !client) return;           // sans serveur configuré : mode invité local (développement)
+  required = true; gateLoading();               // compte obligatoire pour jouer
   $("#accountBtn").classList.remove("hidden");
   const sb = await initAccount({ onSession: onSession, onRecovery: showRecovery, client });
-  if (!sb) $("#accountBtn").classList.add("hidden");
+  if (!sb) gateError("Le service de connexion n'a pas pu être chargé. Vérifie ta connexion Internet.");
   if (sb && client) { const { data } = await client.auth.getSession(); onSession(data?.session ?? null); }
 })();
 

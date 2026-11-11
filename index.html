@@ -27,6 +27,7 @@
     </nav>
     <button id="installBtn" class="btn install hidden">📲 Installer</button>
     <button id="accountBtn" class="btn account hidden" type="button">👤 Se connecter</button>
+    <button id="soundBtn" class="btn account" type="button" aria-label="Son" title="Activer / couper le son">🔊</button>
     <div class="stock-pill" title="Boosters disponibles"><span id="stockCount">0</span> 🎁 <small id="pillTimer"></small></div>
   </header>
 
@@ -104,15 +105,14 @@
         <p class="muted small">Les decks préconstruits sont <b>prêtés pour la manche</b> : ce sont de bons decks de départ, sans carte Épique ni Légendaire, et leurs cartes ne rejoignent pas ta collection. Victoire = +1 booster (3 par jour max) et 15 % de chance d'obtenir une carte Promo. Les Objets, Coachs et Moments demandent une Essence de leur couleur sur le Terrain.</p>
       </div>
       <div id="duelBoard" class="hidden">
-        <div class="bd-phase"><span id="bdPhase"></span>
-          <span class="bd-actions"><button id="btnCombat" class="btn hidden">⚔ Phase de combat</button><button id="btnEnd" class="btn primary hidden">Passer le tour ▶</button></span></div>
-        <div class="bd-info" id="bdOpp"></div>
-        <div class="bd-ess" id="bdEssOpp"></div>
-        <div class="bd-lanes" id="bdLanesOpp"></div>
-        <div class="bd-sep"></div>
-        <div class="bd-lanes" id="bdLanesMe"></div>
-        <div class="bd-ess" id="bdEssMe"></div>
-        <div class="bd-info" id="bdMe"></div>
+        <div class="playmat">
+          <div class="pm-bar" id="bdOpp"></div>
+          <div class="mat opp" id="matOpp"></div>
+          <div class="turnband"><span id="bdPhase"></span><span class="steps" id="bdSteps"></span></div>
+          <div class="mat me" id="matMe"></div>
+          <div class="pm-bar" id="bdMe"></div>
+        </div>
+        <div class="bd-controls"><span class="bd-actions"><button id="btnCombat" class="btn hidden">⚔ Phase de combat</button><button id="btnEnd" class="btn primary hidden">Passer le tour ▶</button></span></div>
         <div class="bd-hand" id="bdHand"></div>
         <div id="duelEnd" class="duel-end hidden"><p id="duelEndMsg"></p><button id="duelAgain" class="btn primary">Rejouer</button></div>
         <details class="bd-logbox" open><summary>Journal</summary><div id="bdLog" class="bd-log"></div></details>
