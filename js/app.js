@@ -102,7 +102,7 @@ $("#openAll").addEventListener("click", () => openPacks(S.get().stock));
 
 // ---------- Collection ----------
 const fR = $("#fRarity");
-for (const [k, r] of Object.entries(RARITIES)) fR.insertAdjacentHTML("beforeend", `<option value="${k}">${r.name}</option>`);
+for (const [k, r] of Object.entries(RARITIES)) if (CARDS.some((c) => c.rarity === k)) fR.insertAdjacentHTML("beforeend", `<option value="${k}">${r.name}</option>`);
 const fC = $("#fCat");
 for (const cat of [...new Set(CARDS.map((c) => c.category))]) fC.insertAdjacentHTML("beforeend", `<option>${esc(cat)}</option>`);
 ["#fSearch", "#fRarity", "#fOwned", "#fCat"].forEach((s) => $(s).addEventListener("input", renderCollection));

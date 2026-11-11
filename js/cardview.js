@@ -1,7 +1,7 @@
-import { RARITIES, SET } from "./cards.js";
+import { RARITIES, SET, rarityOf } from "./cards.js";
 export const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 export function cardHTML(card, { holo = false, hidden = false } = {}) {
-  const r = RARITIES[card.rarity];
+  const r = rarityOf(card);
   if (hidden) {
     return `<div class="card card-hidden" data-r="${card.rarity}" style="--rc:${r.color}">
       <div class="ph"><span class="ph-num">${esc(card.label)}</span><span class="ph-rar">${r.symbol} ${r.name}</span></div></div>`;

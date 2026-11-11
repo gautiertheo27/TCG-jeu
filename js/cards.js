@@ -12,7 +12,8 @@ export const RARITIES = {
   R:  { name: "Rare",        symbol: "★",  color: "#3b8cff", order: 3 },
   E:  { name: "Épique",      symbol: "★★", color: "#a55bff", order: 4 },
   L:  { name: "Légendaire",  symbol: "★★★", color: "#f5b82e", order: 5 },
-  P:  { name: "Promo",       symbol: "P",  color: "#ff4fa3", order: 6 },
+  S:  { name: "Secret",      symbol: "✦",  color: "#7ee8ff", order: 6 },   // rareté officielle ; aucune carte secrète dans notre relevé pour l'instant
+  P:  { name: "Promo",       symbol: "P",  color: "#ff4fa3", order: 7 },
 };
 
 // Couleurs d'Essence (symbole en haut à droite des cartes).
@@ -22,6 +23,8 @@ export const COLORS = {
 };
 
 export const CARDS = CARD_DATA;
+// Rareté imprimée en bas à droite de la carte (P06 est une promo qui porte un « L »).
+export const rarityOf = (c) => RARITIES[c.printedRarity || c.rarity] || RARITIES[c.rarity];
 export const BY_ID = Object.fromEntries(CARDS.map((c) => [c.id, c]));
 export const BY_RARITY = Object.fromEntries(
   Object.keys(RARITIES).map((r) => [r, CARDS.filter((c) => c.rarity === r)])

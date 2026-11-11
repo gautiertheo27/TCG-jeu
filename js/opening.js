@@ -1,14 +1,14 @@
 // Ouverture de booster en plein écran, façon Pokémon Pocket :
 // 1) on découpe le haut du paquet en glissant le doigt, 2) les cartes arrivent empilées face cachée,
 // 3) on les retourne et on les écarte une à une (dans l'ordre réel du paquet), 4) récap de toutes les cartes.
-import { BY_ID, RARITIES } from "./cards.js";
+import { BY_ID, RARITIES, rarityOf } from "./cards.js";
 import { cardHTML, esc } from "./cardview.js";
 import { sfx, unlock } from "./sound.js";
 
 const $ = (s, r = document) => r.querySelector(s);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const RARE = new Set(["R", "E", "L", "P"]);        // fond lumineux sur le dos avant de retourner
-const BIG = new Set(["E", "L", "P"]);              // explosion d'étincelles au retournement
+const RARE = new Set(["R", "E", "L", "S", "P"]);        // fond lumineux sur le dos avant de retourner
+const BIG = new Set(["E", "L", "S", "P"]);              // explosion d'étincelles au retournement
 
 export function isOpening() { return !$("#opening").classList.contains("hidden"); }
 
@@ -46,7 +46,7 @@ export async function playOpening({ pulls, packSrc, quick = false, canAgain = fa
     sfx.fanfare(BY_ID[best.id].rarity);
     const el = q(".op-summary"); el.classList.remove("hidden");
     el.innerHTML = `<h2>${pulls.length > 10 ? `${pulls.length / 10} boosters ouverts` : "Booster ouvert !"}</h2>
-      <p class="muted">${nNew ? `<b>${nNew}</b> nouvelle${nNew > 1 ? "s" : ""} carte${nNew > 1 ? "s" : ""} · ` : ""}Plus belle carte : ${esc(BY_ID[best.id].name)} (${RARITIES[BY_ID[best.id].rarity].name})</p>
+      <p class="muted">${nNew ? `<b>${nNew}</b> nouvelle${nNew > 1 ? "s" : ""} carte${nNew > 1 ? "s" : ""} · ` : ""}Plus belle carte : ${esc(BY_ID[best.id].name)} (${rarityOf(BY_ID[best.id]).name})</p>
       <div class="op-grid">${pulls.map((p, i) => {
         const c = BY_ID[p.id];
         return `<div class="op-mini" style="animation-delay:${Math.min(i, 30) * 45}ms">${p.isNew ? '<span class="badge-new">NOUVEAU</span>' : ""}${p.holo ? '<span class="badge-holo">HOLO</span>' : ""}${cardHTML(c, { holo: p.holo })}</div>`;

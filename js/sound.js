@@ -64,7 +64,7 @@ export const sfx = {
   dismiss() { if (!ok()) return; noise(now(), 0.16, { type: "lowpass", f0: 3200, f1: 500, q: 0.7, gain: 0.16 }); },
   // Fin d'ouverture, petite fanfare (plus belle si on a tiré une grosse carte)
   fanfare(best = "C") {
-    if (!ok()) return; const t = now(), big = ["E", "L", "P"].includes(best), notes = big ? [523, 659, 784, 1047, 1319] : [523, 659, 784];
+    if (!ok()) return; const t = now(), big = ["E", "L", "S", "P"].includes(best), notes = big ? [523, 659, 784, 1047, 1319] : [523, 659, 784];
     notes.forEach((f, i) => bell(t + i * 0.09, f, 0.6, 0.1));
   },
   tap() { if (!ok()) return; tone(now(), 880, 0.08, { type: "triangle", gain: 0.06, slideTo: 660 }); },
@@ -94,4 +94,4 @@ const JINGLE = {
     sparkle(c, 16, 1.4, 0.07);
   },
 };
-JINGLE.P = JINGLE.L;
+JINGLE.P = JINGLE.L; JINGLE.S = JINGLE.L;
