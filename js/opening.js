@@ -27,7 +27,7 @@ export async function playOpening({ pulls, packSrc, quick = false, canAgain = fa
       </div>
       <div class="op-stack hidden"></div>
     </div>
-    <div class="op-hint">Glisse sur le haut du paquet pour l'ouvrir ➜</div>
+    <div class="op-hint">Touche le paquet, ou glisse sur son haut, pour l'ouvrir ➜</div>
     <div class="op-count hidden"></div>
     <button class="op-skip btn" type="button">Tout révéler ⏭</button>
     <div class="op-summary hidden"></div>`;
@@ -88,16 +88,22 @@ export async function playOpening({ pulls, packSrc, quick = false, canAgain = fa
   let drag = null;
   pack.addEventListener("pointerdown", (e) => {
     if (torn) return; const r = pack.getBoundingClientRect();
-    drag = { x: e.clientX, w: r.width, onTop: e.clientY - r.top < r.height * 0.42 };
-    pack.setPointerCapture(e.pointerId);
+    drag = { x: e.clientX, y: e.clientY, w: r.width, moved: 0, onTop: e.clientY - r.top < r.height * 0.42 };
+    try { pack.setPointerCapture(e.pointerId); } catch (_) {}
   });
   pack.addEventListener("pointermove", (e) => {
     if (!drag || torn) return; const dx = Math.max(0, e.clientX - drag.x);
-    if (drag.onTop) { top.style.transition = "none"; top.style.transform = `translate(${dx * 0.9}px, ${-dx * 0.12}px) rotate(${dx * 0.05}deg)`; }
-    if (dx > drag.w * 0.55 && drag.onTop) { drag = null; tear(); }
+    drag.moved = Math.max(drag.moved, Math.hypot(e.clientX - drag.x, e.clientY - drag.y));
+    if (drag.onTop && drag.moved > 10) { top.style.transition = "none"; top.style.transform = `translate(${dx * 0.9}px, ${-dx * 0.12}px) rotate(${dx * 0.05}deg)`; }
+    if (dx > drag.w * 0.5 && drag.onTop) { drag = null; tear(); }
   });
-  pack.addEventListener("pointerup", () => { if (drag && !torn) { top.style.transition = "transform .25s"; top.style.transform = ""; } drag = null; });
-  pack.addEventListener("click", (e) => { if (e.detail && !torn && drag === null && e.pointerType !== "touch") { /* un simple clic ouvre aussi */ tear(); } });
+  // Un simple toucher / clic ouvre aussi le paquet ; un glissé trop court le remet en place.
+  pack.addEventListener("pointerup", () => {
+    if (!drag || torn) { drag = null; return; }
+    const tap = drag.moved < 12; drag = null;
+    if (tap) tear(); else { top.style.transition = "transform .25s"; top.style.transform = ""; }
+  });
+  pack.addEventListener("pointercancel", () => { drag = null; top.style.transition = "transform .25s"; top.style.transform = ""; });
   pack.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") tear(); });
   pack.tabIndex = 0;
   q(".op-skip").addEventListener("click", () => summary());
