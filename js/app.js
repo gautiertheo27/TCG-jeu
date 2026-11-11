@@ -1,4 +1,4 @@
-import { CARDS, BY_ID, RARITIES, COLORS, SET, PACK_SLOTS, PACK_SIZE, MISSING } from "./cards.js";
+import { CARDS, BY_ID, RARITIES, COLORS, SET, PACK_SLOTS, PACK_SIZE, MISSING, boosterChance, rarityOf, PROMO_CHANCE_ON_WIN } from "./cards.js";
 import * as S from "./state.js";
 import { cardHTML, placeholderHTML, esc } from "./cardview.js";
 import { initDuel } from "./duel-ui.js";
@@ -27,6 +27,7 @@ function showTab(name) {
   if (name === "collection") renderCollection();
   if (name === "duel") renderDuelSetup();
   if (name === "profil") renderProfile();
+  if (name === "livre") renderBook();
 }
 
 let toastTimer;
@@ -149,6 +150,42 @@ $("#collGrid").addEventListener("click", (e) => {
   const c = BY_ID[cell.dataset.id], entry = S.get().collection[c.id];
   if (!entry) { toast(`${c.label} — pas encore obtenue`); return; }
   openZoom(c, entry);
+});
+
+// ---------- Livre : rareté et chance de chaque carte ----------
+const pct = (x) => `${(x * 100).toLocaleString("fr-FR", { maximumFractionDigits: x < 0.01 ? 2 : x < 0.1 ? 1 : 0 })} %`;
+const oneIn = (x) => (x >= 0.5 ? "presque à chaque booster" : `1 booster sur ${Math.round(1 / x).toLocaleString("fr-FR")}`);
+const fR2 = $("#bkRarity");
+for (const [k, r] of Object.entries(RARITIES)) if (CARDS.some((c) => c.rarity === k)) fR2.insertAdjacentHTML("beforeend", `<option value="${k}">${r.name}</option>`);
+["#bkSearch", "#bkRarity", "#bkSort"].forEach((x) => $(x).addEventListener("input", renderBook));
+function renderBook() {
+  // Résumé par rareté
+  const rows = Object.entries(RARITIES).map(([k, r]) => {
+    const cs = CARDS.filter((c) => c.rarity === k); if (!cs.length) return "";
+    const one = boosterChance(cs[0]);
+    return `<tr><td><b style="color:${r.color}">${r.symbol} ${r.name}</b> <small class="muted">(${k})</small></td><td>${cs.length}</td><td>${pct(one.atLeastOne)}</td><td>${oneIn(one.atLeastOne)}</td></tr>`;
+  }).join("");
+  $("#bkSummary").innerHTML = `<table><thead><tr><th>Rareté</th><th>Cartes</th><th>Chance par carte et par booster</th><th>Soit</th></tr></thead><tbody>${rows}</tbody></table>
+    <p class="muted small">Chaque carte d'une même rareté a la même chance. Les cartes <b>Promo</b> peuvent aussi tomber après une victoire en duel (${pct(PROMO_CHANCE_ON_WIN)} par victoire, 3 boosters de récompense par jour maximum).</p>`;
+  const q = $("#bkSearch").value.trim().toLowerCase(), rar = fR2.value, sort = $("#bkSort").value;
+  let list = CARDS.filter((c) => (!rar || c.rarity === rar) && (!q || `${c.name} ${c.category} ${c.color} ${c.label}`.toLowerCase().includes(q)));
+  const ch = new Map(list.map((c) => [c.id, boosterChance(c)]));
+  list.sort(sort === "rare" ? (x, y) => ch.get(x.id).atLeastOne - ch.get(y.id).atLeastOne || x.n - y.n : sort === "name" ? (x, y) => x.name.localeCompare(y.name, "fr") : (x, y) => x.n - y.n);
+  $("#bkCount").textContent = `${list.length} carte${list.length > 1 ? "s" : ""}`;
+  $("#bkList").innerHTML = list.map((c) => {
+    const r = rarityOf(c), x = ch.get(c.id), n = S.owned(c.id);
+    return `<div class="bk-row${n ? " have" : ""}" data-id="${c.id}">
+      <div class="bk-img">${cardHTML(c)}</div>
+      <div class="bk-info"><b>${esc(c.name)}</b>
+        <span class="muted small">${esc(c.label)} · ${esc(c.category)}${c.subtype ? " " + esc(c.subtype) : ""}${c.color ? " · " + esc(c.color) : ""}</span>
+        <span class="bk-rar" style="--rc:${r.color}">${r.symbol} ${r.name}</span></div>
+      <div class="bk-chance"><b>${pct(x.atLeastOne)}</b><span class="muted small">${oneIn(x.atLeastOne)}</span>${n ? `<span class="bk-own">✓ possédée ×${n}</span>` : ""}</div></div>`;
+  }).join("") || '<p class="muted">Aucune carte ne correspond.</p>';
+}
+$("#bkList").addEventListener("click", (e) => {
+  const row = e.target.closest(".bk-row"); if (!row) return;
+  const c = BY_ID[row.dataset.id], entry = S.get().collection[c.id];
+  openZoom(c, entry || { n: 0, holo: 0 });
 });
 
 // ---------- Zoom avec effet brillance ----------

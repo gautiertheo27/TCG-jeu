@@ -23,6 +23,7 @@
       <button data-tab="boosters" class="active">Boosters</button>
       <button data-tab="collection">Collection</button>
       <button data-tab="duel">Duel</button>
+      <button data-tab="livre">Livre</button>
       <button data-tab="profil">Profil</button>
     </nav>
     <button id="installBtn" class="btn install hidden">📲 Installer</button>
@@ -83,6 +84,20 @@
         </div>
       </div>
       <div id="collGrid" class="grid"></div>
+    </section>
+
+    <!-- LIVRE -->
+    <section id="tab-livre" class="tab">
+      <h2>Livre des cartes</h2>
+      <p class="muted">La rareté de chaque carte et sa chance de sortir dans un booster (10 cartes). Touche une carte pour la voir en grand.</p>
+      <div id="bkSummary" class="bk-summary"></div>
+      <div class="filters bk-filters">
+        <input id="bkSearch" type="search" placeholder="Rechercher une carte…">
+        <select id="bkRarity"><option value="">Toutes raretés</option></select>
+        <select id="bkSort"><option value="num">Par numéro</option><option value="rare">Plus rares d'abord</option><option value="name">Par nom</option></select>
+        <span id="bkCount" class="muted"></span>
+      </div>
+      <div id="bkList" class="bk-list"></div>
     </section>
 
     <!-- DUEL -->

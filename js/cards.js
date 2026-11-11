@@ -36,13 +36,25 @@ export const MISSING = Array.from({ length: SET.total }, (_, i) => i + 1).filter
 
 // ---------- Booster : 10 cartes, révélées dans l'ordre réel du paquet ----------
 // Essence → communes → peu communes → reverse holo → rare garantie (toujours en dernier).
-// Les promos (P) ne sortent pas en booster : elles se gagnent en Duel.
+// Les promos (P) sortent rarement dans le dernier emplacement (4 %) et se gagnent aussi en Duel.
 export const PACK_SLOTS = [
   { label: "Essence",      count: 1, table: [["ES", 1]] },
   { label: "Commune",      count: 4, table: [["C", 1]] },
   { label: "Peu commune",  count: 3, table: [["PC", 1]] },
   { label: "Reverse holo", count: 1, foil: true, table: [["C", 0.55], ["PC", 0.30], ["R", 0.15]] },
-  { label: "Rare garantie", count: 1, table: [["L", 0.04], ["E", 0.18], ["R", 0.78]] },
+  { label: "Rare garantie", count: 1, table: [["P", 0.04], ["L", 0.04], ["E", 0.18], ["R", 0.74]] },   // 4 % de chance d'une carte Promo
 ];
 export const PACK_SIZE = PACK_SLOTS.reduce((s, x) => s + x.count, 0);
 export const PROMO_CHANCE_ON_WIN = 0.15;
+
+// ---------- Chance d'obtenir une carte dans un booster (calculée depuis la composition ci-dessus) ----------
+// Pour chaque emplacement, chaque tirage donne la carte avec (probabilité de sa rareté) / (nombre de cartes de cette rareté).
+export function boosterChance(card) {
+  let none = 1, expected = 0;
+  for (const slot of PACK_SLOTS) {
+    const pool = BY_RARITY[card.rarity]?.length || 1;
+    const p = slot.table.filter(([r]) => r === card.rarity).reduce((a, [, pr]) => a + pr, 0) / pool;
+    none *= Math.pow(1 - p, slot.count); expected += slot.count * p;
+  }
+  return { atLeastOne: 1 - none, expected };
+}

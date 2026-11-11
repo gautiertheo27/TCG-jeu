@@ -387,3 +387,16 @@ body.no-scroll { overflow: hidden; }
 .modal.gate { z-index: 120; background: radial-gradient(900px 600px at 50% 30%, #3a1440 0%, #120b1a 60%, #07040b 100%); }
 .gate-brand { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; } .gate-brand small { display: block; color: var(--muted); }
 .gate .modal-box { max-width: 440px; }
+
+/* ---------- Livre des cartes ---------- */
+.bk-summary { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 14px; margin: 12px 0; overflow-x: auto; }
+.bk-summary table { width: 100%; border-collapse: collapse; font-size: .9rem; } .bk-summary th, .bk-summary td { text-align: left; padding: 7px 8px; border-top: 1px solid var(--line); } .bk-summary thead th { border-top: 0; color: var(--muted); font-size: .78rem; }
+.bk-filters { align-items: center; margin-bottom: 12px; }
+.bk-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 10px; }
+.bk-row { display: flex; align-items: center; gap: 12px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 8px 12px 8px 8px; cursor: pointer; }
+.bk-row:hover { border-color: var(--pink); } .bk-row.have { border-color: #3fbf7f66; }
+.bk-img { width: 64px; flex: none; } .bk-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; } .bk-info b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bk-rar { font-weight: 800; font-size: .82rem; color: var(--rc); }
+.bk-chance { text-align: right; display: flex; flex-direction: column; gap: 1px; min-width: 96px; } .bk-chance b { font-size: 1.15rem; color: var(--pink2); }
+.bk-own { color: #3fbf7f; font-size: .72rem; font-weight: 800; }
+@media (max-width: 640px) { .bk-list { grid-template-columns: 1fr; } .tabs button { padding: 8px 10px; } }
