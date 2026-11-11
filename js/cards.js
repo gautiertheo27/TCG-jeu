@@ -53,7 +53,7 @@ function slotTables() {
 }
 export const PACK_SLOTS = [
   { label: "Cartes 1 à 6 : Commune ou Peu commune (Communes d'abord)", count: 6, sort: true, table: [["C", 0.60], ["PC", 0.40]] },
-  { label: "Carte 7 : Essence reverse", count: 1, foil: true, table: [["ES", 1]] },
+  { label: "Carte 7 : Essence (1 chance sur 1 000 d'être holo)", count: 1, foil: 0.001, table: [["ES", 1]] },
   { label: "Carte 8 : Reverse", count: 1, foil: true, table: [["C", 0.55], ["PC", 0.30], ["R", 0.15]] },
   { label: "Carte 9 : Rare, Épique, Légendaire ou Promo", count: 1, table: slotTables().slot9 },
   { label: "Carte 10 : Rare, Épique, Légendaire ou Promo (ou, plus rarement, Commune / Peu commune)", count: 1, table: slotTables().slot10 },

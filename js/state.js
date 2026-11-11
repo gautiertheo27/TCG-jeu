@@ -104,7 +104,7 @@ export function rollBooster() {
     const part = [];
     for (let i = 0; i < slot.count; i++) {
       const card = pick(BY_RARITY[rollRarity(slot.table)]);
-      part.push({ id: card.id, holo: !!slot.foil, slot: slot.label });
+      part.push({ id: card.id, holo: slot.foil === true || (typeof slot.foil === "number" && Math.random() < slot.foil), slot: slot.label });
     }
     // Ordre réel du paquet : les moins rares d'abord, la plus belle carte en dernier.
     if (slot.sort) part.sort((x, y) => RARITIES[BY_ID[x.id].rarity].order - RARITIES[BY_ID[y.id].rarity].order);

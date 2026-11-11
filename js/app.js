@@ -40,7 +40,7 @@ function toast(msg) {
 
 // ---------- Boosters ----------
 $("#packSize").textContent = `${PACK_SIZE} cartes`;
-$("#odds").innerHTML = PACK_SLOTS.map((sl) => `<tr><td>${sl.count}× ${sl.label}${sl.foil ? " ✨" : ""}</td><td>${
+$("#odds").innerHTML = PACK_SLOTS.map((sl) => `<tr><td>${sl.count}× ${sl.label}${sl.foil === true ? " ✨" : ""}</td><td>${
   sl.table.map(([r, p]) => `<span style="color:${RARITIES[r].color}">${RARITIES[r].symbol} ${RARITIES[r].name}</span> ${+(p * 100).toFixed(1)} %`).join("<br>")}</td></tr>`).join("");
 
 // Designs des boosters (images fournies dans src/boosters/). Sans images, le booster CSS reste affiché.
