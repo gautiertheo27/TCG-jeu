@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Gentle Mates TCG</title>
+  <meta name="description" content="Jeu de cartes à collectionner fan-made Gentle Mates : ouvre 2 boosters par heure, complète ta collection et affronte l'IA.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🃏</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="top">
+    <div class="brand"><span class="logo">GM</span><div><strong>Gentle Mates TCG</strong><small>Mates Origins</small></div></div>
+    <nav class="tabs" role="tablist">
+      <button data-tab="boosters" class="active">Boosters</button>
+      <button data-tab="collection">Collection</button>
+      <button data-tab="duel">Duel</button>
+      <button data-tab="profil">Profil</button>
+    </nav>
+    <div class="stock-pill" title="Boosters disponibles"><span id="stockCount">0</span> 🎁</div>
+  </header>
+
+  <main>
+    <!-- BOOSTERS -->
+    <section id="tab-boosters" class="tab active">
+      <div class="booster-zone">
+        <button id="boosterPack" class="pack" aria-label="Ouvrir un booster">
+          <span class="pack-shine"></span>
+          <span class="pack-logo">GM</span>
+          <span class="pack-title">MATES ORIGINS</span>
+          <span class="pack-sub">5 cartes</span>
+        </button>
+        <div class="booster-info">
+          <p class="big"><span id="stockBig">0</span> booster(s) disponible(s)</p>
+          <p id="nextTimer" class="muted">Prochain booster dans --:--</p>
+          <p class="muted small">2 boosters par heure, cumulables (max <span id="maxStock"></span>).</p>
+          <div class="btn-row">
+            <button id="openOne" class="btn primary">Ouvrir un booster</button>
+            <button id="openAll" class="btn">Tout ouvrir</button>
+          </div>
+        </div>
+      </div>
+      <div id="reveal" class="reveal hidden">
+        <div id="revealCards" class="reveal-cards"></div>
+        <div class="btn-row center">
+          <button id="revealAll" class="btn">Tout révéler</button>
+          <button id="revealDone" class="btn primary">Continuer</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- COLLECTION -->
+    <section id="tab-collection" class="tab">
+      <div class="coll-head">
+        <div>
+          <h2>Collection <span id="collCount" class="muted"></span></h2>
+          <div class="progress"><div id="collBar"></div></div>
+        </div>
+        <div class="filters">
+          <input id="fSearch" type="search" placeholder="Rechercher une carte…">
+          <select id="fRarity"><option value="">Toutes raretés</option></select>
+          <select id="fOwned">
+            <option value="">Toutes</option><option value="have">Possédées</option>
+            <option value="missing">Manquantes</option><option value="dupes">Doublons</option>
+          </select>
+        </div>
+      </div>
+      <div id="collGrid" class="grid"></div>
+    </section>
+
+    <!-- DUEL -->
+    <section id="tab-duel" class="tab">
+      <div id="duelSetup">
+        <h2>Duel contre l'IA</h2>
+        <p class="muted">Choisis <strong>5 cartes</strong>. Chaque manche, la plus forte gagne. Bonus +3 si ton type bat celui de l'adversaire
+          (⚔️ Attaque &gt; 🧠 Tactique &gt; 🛡️ Défense &gt; ⚔️ Attaque). Victoire = +1 booster (3 par jour max).</p>
+        <div class="btn-row"><button id="duelAuto" class="btn">Sélection auto</button><button id="duelStart" class="btn primary" disabled>Lancer le duel (0/5)</button></div>
+        <div id="duelPick" class="grid small-grid"></div>
+      </div>
+      <div id="duelBoard" class="hidden">
+        <div class="score"><span>Toi <b id="sMe">0</b></span><span class="muted" id="roundLbl">Manche 1/5</span><span><b id="sAi">0</b> IA</span></div>
+        <div class="arena"><div id="slotAi" class="slot"></div><div id="duelMsg" class="duel-msg">Joue une carte</div><div id="slotMe" class="slot"></div></div>
+        <div id="hand" class="hand"></div>
+        <div class="btn-row center"><button id="duelAgain" class="btn primary hidden">Rejouer</button></div>
+      </div>
+    </section>
+
+    <!-- PROFIL -->
+    <section id="tab-profil" class="tab">
+      <h2>Profil</h2>
+      <div id="stats" class="stats"></div>
+      <h3>Sauvegarde</h3>
+      <p class="muted small">Ta progression est enregistrée dans ce navigateur. Copie ce code pour la transférer sur un autre appareil.</p>
+      <textarea id="saveCode" rows="3" spellcheck="false"></textarea>
+      <div class="btn-row">
+        <button id="btnExport" class="btn">Générer le code</button>
+        <button id="btnImport" class="btn">Importer</button>
+        <button id="btnReset" class="btn danger">Réinitialiser</button>
+      </div>
+    </section>
+  </main>
+
+  <div id="zoom" class="zoom hidden" role="dialog" aria-modal="true"></div>
+  <div id="toast" class="toast"></div>
+
+  <footer>Projet fan non officiel, non affilié à Gentle Mates. Visuels originaux.</footer>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
