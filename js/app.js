@@ -8,6 +8,10 @@ import { configured, initAccount, auth, api, providerLabel, enabledProviders } f
 
 const $ = (s) => document.querySelector(s);
 
+// Aucune erreur silencieuse : tout problème s'affiche à l'écran.
+window.addEventListener("unhandledrejection", (e) => toast("Erreur : " + (e.reason?.message || e.reason)));
+window.addEventListener("error", (e) => { if (e.message) toast("Erreur : " + e.message); });
+
 // ---------- Son ----------
 const syncSound = () => { $("#soundBtn").textContent = isMuted() ? "🔇" : "🔊"; };
 syncSound();
@@ -79,19 +83,31 @@ function tick() {
   const mins = S.BOOSTER_INTERVAL_MS / 60000;
   $("#rule").textContent = `Glisse sur le haut du paquet (ou touche-le) pour l'ouvrir. 1 booster toutes les ${mins} minutes, ${Number.isFinite(max) ? max : "illimités"} en stock au maximum.`;
   const busy = isOpening();
-  $("#openOne").disabled = st <= 0 || busy;
+  const ob = $("#openOne"); ob.disabled = st <= 0 || busy || opening;
+  ob.textContent = opening ? "Ouverture…" : st > 0 ? "Ouvrir un booster" : next === null ? "Aucun booster" : `Prochain booster dans ${fmt(next)}`;
   $("#boosterPack").classList.toggle("empty", st <= 0);
 }
 
+let opening = false;                       // une ouverture est en cours (attente du serveur ou animation)
 async function openPacks(count) {
-  if (isOpening()) return;
-  const pulls = [];
-  for (let i = 0; i < count; i++) { const p = await S.openBooster().catch((e) => { toast("Erreur serveur : " + e.message); return null; }); if (!p) break; pulls.push(...p); }
-  if (!pulls.length) { toast("Plus de booster : reviens dans quelques minutes !"); return; }
-  tick();
-  const { again } = await playOpening({ pulls, packSrc: BOOSTER_ART[packIdx], canAgain: S.get().stock > 0 });
-  tick(); window.scrollTo({ top: 0 });
-  if (again) openPacks(1);
+  if (isOpening() || opening) return;
+  opening = true; tick();
+  try {
+    const pulls = [];
+    for (let i = 0; i < count; i++) { const p = await S.openBooster(); if (!p) break; pulls.push(...p); }
+    if (!pulls.length) {
+      const next = S.msUntilNext();
+      modal(`<h3>Aucun booster disponible</h3><p class="muted">${next === null ? "" : `Le prochain arrive dans <b>${fmt(next)}</b>.`} Un booster est offert toutes les ${S.BOOSTER_INTERVAL_MS / 60000} minutes, et chaque victoire en duel peut en rapporter un.</p><div class="btn-row"><button class="btn primary" data-close>OK</button></div>`);
+      return;
+    }
+    tick();
+    const { again } = await playOpening({ pulls, packSrc: BOOSTER_ART[packIdx], canAgain: S.get().stock > 0 });
+    opening = false; tick(); window.scrollTo({ top: 0 });
+    if (again) openPacks(1);
+  } catch (e) {
+    console.error("Ouverture de booster :", e);
+    modal(`<h3>Ouverture impossible</h3><p>Le jeu n'a pas réussi à ouvrir le booster.</p><p class="auth-msg">${esc(e.message || String(e))}</p><div class="btn-row"><button class="btn primary" data-close>Fermer</button></div>`);
+  } finally { opening = false; tick(); }
 }
 
 $("#boosterPack").addEventListener("click", () => openPacks(1));
