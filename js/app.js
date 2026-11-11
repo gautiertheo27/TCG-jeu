@@ -84,6 +84,7 @@ function tick() {
   const mins = S.BOOSTER_INTERVAL_MS / 60000;
   $("#rule").textContent = `Glisse sur le haut du paquet (ou touche-le) pour l'ouvrir. 1 booster toutes les ${mins} minutes, ${Number.isFinite(max) ? max : "illimités"} en stock au maximum.`;
   const busy = isOpening();
+  $("#openAll").disabled = st <= 1 || busy || opening; $("#openAll").textContent = st > 1 ? `Tout ouvrir (${st})` : "Tout ouvrir";
   const ob = $("#openOne"); ob.disabled = st <= 0 || busy || opening;
   ob.textContent = opening ? "Ouverture…" : st > 0 ? "Ouvrir un booster" : next === null ? "Aucun booster" : `Prochain booster dans ${fmt(next)}`;
   $("#boosterPack").classList.toggle("empty", st <= 0);
@@ -102,7 +103,8 @@ async function openPacks(count) {
       return;
     }
     tick();
-    const { again } = await playOpening({ pulls, packSrc: BOOSTER_ART[packIdx], canAgain: S.get().stock > 0 });
+    // « Tout ouvrir » : pas d'animation, on va directement à la page de récapitulatif de toutes les cartes.
+    const { again } = await playOpening({ pulls, packSrc: BOOSTER_ART[packIdx], quick: count > 1, canAgain: S.get().stock > 0 });
     opening = false; tick(); window.scrollTo({ top: 0 });
     if (again) openPacks(1);
   } catch (e) {
@@ -113,6 +115,7 @@ async function openPacks(count) {
 
 $("#boosterPack").addEventListener("click", () => openPacks(1));
 $("#openOne").addEventListener("click", () => openPacks(1));
+$("#openAll").addEventListener("click", () => openPacks(S.get().stock));
 
 // ---------- Collection ----------
 const fR = $("#fRarity");
