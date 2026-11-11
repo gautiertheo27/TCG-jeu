@@ -46,7 +46,7 @@
         <div class="booster-info">
           <p class="big"><span id="stockBig">0</span> booster(s) disponible(s)</p>
           <p id="nextTimer" class="muted">Prochain booster dans --:--</p>
-          <p class="muted small">2 boosters par heure, cumulables (max <span id="maxStock"></span>).</p>
+          <p class="muted small">Glisse sur le haut du paquet (ou touche-le) pour l'ouvrir. 2 boosters par heure, cumulables (max <span id="maxStock"></span>).</p>
           <div class="btn-row">
             <button id="openOne" class="btn primary">Ouvrir un booster</button>
             <button id="openAll" class="btn">Tout ouvrir</button>
@@ -58,13 +58,6 @@
         <p class="muted small">Les cartes sont révélées dans l'ordre réel du paquet : la rare arrive toujours en dernier.
         Les cartes Promo (P) ne sortent pas en booster : chaque victoire en Duel a 15 % de chance d'en donner une.</p>
       </details>
-      <div id="reveal" class="reveal hidden">
-        <div id="revealCards" class="reveal-cards"></div>
-        <div class="btn-row center">
-          <button id="revealAll" class="btn">Tout révéler</button>
-          <button id="revealDone" class="btn primary">Continuer</button>
-        </div>
-      </div>
     </section>
 
     <!-- COLLECTION -->
@@ -137,6 +130,7 @@
     </section>
   </main>
 
+  <div id="opening" class="opening hidden" role="dialog" aria-modal="true" aria-label="Ouverture de booster"></div>
   <div id="zoom" class="zoom hidden" role="dialog" aria-modal="true"></div>
   <div id="toast" class="toast"></div>
 

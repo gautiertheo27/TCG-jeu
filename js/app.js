@@ -2,6 +2,7 @@ import { CARDS, BY_ID, RARITIES, COLORS, SET, PACK_SLOTS, PACK_SIZE, MISSING } f
 import * as S from "./state.js";
 import { cardHTML, placeholderHTML, esc } from "./cardview.js";
 import { initDuel } from "./duel-ui.js";
+import { playOpening, isOpening } from "./opening.js";
 
 const $ = (s) => document.querySelector(s);
 
@@ -61,49 +62,27 @@ function tick() {
   $("#stockCount").textContent = st; $("#stockBig").textContent = st;
   const next = S.msUntilNext();
   $("#nextTimer").textContent = next === null ? "Stock plein — ouvre tes boosters !" : `Prochain booster dans ${fmt(next)}`;
-  const busy = !$("#reveal").classList.contains("hidden");
+  const busy = isOpening();
   $("#openOne").disabled = st <= 0 || busy;
   $("#openAll").disabled = st <= 1 || busy;
   $("#boosterPack").classList.toggle("empty", st <= 0);
 }
 
-function openPacks(count) {
-  if (!$("#reveal").classList.contains("hidden")) return;
+async function openPacks(count) {
+  if (isOpening()) return;
+  const quick = count > 1;                       // « Tout ouvrir » : récap direct, sans animation
   const pulls = [];
   for (let i = 0; i < count; i++) { const p = S.openBooster(); if (!p) break; pulls.push(...p); }
   if (!pulls.length) { toast("Plus de booster : reviens dans quelques minutes !"); return; }
-  // Ordre réel d'ouverture conservé : communes → peu communes → reverse → rare.
-  const pack = $("#boosterPack");
-  pack.classList.remove("opening"); void pack.offsetWidth; pack.classList.add("opening");
-  setTimeout(() => showReveal(pulls), 450);
   tick();
-}
-
-function showReveal(pulls) {
-  const box = $("#revealCards");
-  box.innerHTML = pulls.map((p, i) => {
-    const c = BY_ID[p.id];
-    return `<div class="flip" data-r="${c.rarity}" style="animation-delay:${Math.min(i, 20) * 70}ms;--glow:${RARITIES[c.rarity].color}">
-      <div class="face back"><div class="card-back"><span>GM</span></div></div>
-      <div class="face front">${p.isNew ? '<span class="badge-new">NOUVEAU</span>' : ""}${p.holo ? '<span class="badge-holo">HOLO</span>' : ""}${cardHTML(c, { holo: p.holo })}</div>
-    </div>`;
-  }).join("");
-  box.querySelectorAll(".flip").forEach((f) => f.addEventListener("click", () => f.classList.add("flipped")));
-  $("#reveal").classList.remove("hidden");
-  $("#reveal").scrollIntoView({ behavior: "smooth", block: "start" });
-  tick();
+  const { again } = await playOpening({ pulls, packSrc: BOOSTER_ART[packIdx], quick, canAgain: S.get().stock > 0 });
+  tick(); window.scrollTo({ top: 0 });
+  if (again) openPacks(1);
 }
 
 $("#boosterPack").addEventListener("click", () => openPacks(1));
 $("#openOne").addEventListener("click", () => openPacks(1));
 $("#openAll").addEventListener("click", () => openPacks(S.get().stock));
-$("#revealAll").addEventListener("click", () => {
-  document.querySelectorAll("#revealCards .flip").forEach((f, i) => setTimeout(() => f.classList.add("flipped"), i * 90));
-});
-$("#revealDone").addEventListener("click", () => {
-  $("#reveal").classList.add("hidden"); $("#revealCards").innerHTML = ""; tick();
-  window.scrollTo({ top: 0, behavior: "smooth" });
-});
 
 // ---------- Collection ----------
 const fR = $("#fRarity");

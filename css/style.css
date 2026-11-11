@@ -293,3 +293,52 @@ body { padding-left: env(safe-area-inset-left); padding-right: env(safe-area-ins
 .pack-picker button { width: 46px; height: 68px; padding: 3px; border: 2px solid var(--line); border-radius: 8px; overflow: hidden; background: #15111c; cursor: pointer; opacity: .6; }
 .pack-picker button.on { border-color: var(--pink); opacity: 1; }
 .pack-picker img { width: 100%; height: 100%; object-fit: contain; display: block; }
+
+/* ---------- Ouverture façon Pokémon Pocket ---------- */
+body.no-scroll { overflow: hidden; }
+.opening { position: fixed; inset: 0; z-index: 80; overflow: hidden; display: grid; place-items: center; touch-action: none; user-select: none; -webkit-user-select: none; }
+.opening.shake { animation: opShake .45s; }
+@keyframes opShake { 20% { transform: translate(-6px, 3px); } 40% { transform: translate(6px, -4px); } 60% { transform: translate(-4px, 2px); } 80% { transform: translate(3px, -2px); } }
+.op-bg { position: absolute; inset: 0; background: radial-gradient(900px 600px at 50% 40%, #3a1440 0%, #120b1a 55%, #07040b 100%); }
+.op-flash { position: absolute; inset: 0; background: radial-gradient(circle at 50% 45%, #fff 0%, #ffd6ef 25%, transparent 65%); opacity: 0; pointer-events: none; z-index: 5; }
+.op-flash.on { animation: opFlash .7s ease-out; } .op-flash.strong.on { animation-duration: 1.1s; background: radial-gradient(circle at 50% 45%, #fff 0%, #ffe9a8 30%, transparent 70%); }
+@keyframes opFlash { 0% { opacity: 0; } 15% { opacity: .95; } 100% { opacity: 0; } }
+.op-stage { position: relative; width: min(300px, 72vw); aspect-ratio: 640 / 894; display: grid; place-items: center; }
+.op-pack { position: relative; width: 100%; aspect-ratio: 203 / 306; max-height: 70vh; cursor: grab; touch-action: none; outline: none; filter: drop-shadow(0 22px 34px rgba(255, 79, 163, .4)); animation: float 3s ease-in-out infinite; }
+.op-pack.gone { opacity: 0; transition: opacity .3s; pointer-events: none; animation: none; }
+.op-part { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; pointer-events: none; }
+.op-top { clip-path: inset(0 0 66% 0); z-index: 2; } .op-bottom { clip-path: inset(32% 0 0 0); }
+.op-bottom.drop { transition: transform .5s ease-in, opacity .5s; transform: translateY(60px) scale(.96); opacity: 0; }
+.op-cut { position: absolute; left: -4%; right: -4%; top: 34%; height: 0; z-index: 3; pointer-events: none; border-top: 2px dashed #fff; filter: drop-shadow(0 0 6px #ff4fa3); animation: opCut 1.2s linear infinite; }
+.op-cut.hidden { display: none; }
+.op-cut span { position: absolute; right: 8px; top: -26px; font-size: 1.3rem; animation: opNudge 1s ease-in-out infinite; }
+.op-cut span::before { content: "✂"; }
+@keyframes opCut { to { border-top-color: #ff86c1; } } @keyframes opNudge { 50% { transform: translateX(-12px); } }
+.op-hint { position: absolute; left: 0; right: 0; bottom: max(76px, 11vh); text-align: center; color: #d9cde8; font-weight: 600; padding: 0 16px; z-index: 3; text-shadow: 0 2px 8px #000; }
+.op-count { position: absolute; top: max(16px, env(safe-area-inset-top)); left: 0; right: 0; text-align: center; font-family: "Bebas Neue", sans-serif; font-size: 1.6rem; letter-spacing: 2px; color: #fff; z-index: 3; }
+.op-skip { position: absolute; bottom: max(20px, env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); z-index: 6; opacity: .85; }
+.op-stack { position: absolute; inset: 0; perspective: 1100px; }
+.op-stack.hidden, .op-count.hidden, .op-summary.hidden, .op-stage.hidden, .op-skip.hidden, .op-hint.hidden { display: none; }
+.op-card { position: absolute; inset: 0; cursor: pointer; touch-action: none; transform: translate(var(--ox, 0), var(--oy, 0)) rotate(var(--rot, 0deg)); animation: opDeal .5s cubic-bezier(.2, .9, .3, 1.2) backwards; outline: none; }
+.op-card.top { transform: none; transition: transform .3s; }
+.op-card.top.rare:not(.flipped)::before { content: ""; position: absolute; inset: -14px; border-radius: 16px; background: radial-gradient(closest-side, var(--glow), transparent 75%); opacity: .75; filter: blur(8px); animation: opPulse 1.1s ease-in-out infinite; z-index: -1; }
+.op-card.flipped::before { content: ""; position: absolute; inset: -30px; border-radius: 30px; background: radial-gradient(closest-side, var(--glow), transparent 72%); opacity: .55; filter: blur(14px); z-index: -1; }
+.op-card[data-r="E"].flipped::before, .op-card[data-r="L"].flipped::before, .op-card[data-r="P"].flipped::before { opacity: .9; animation: opPulse 1.6s ease-in-out infinite; }
+@keyframes opDeal { from { opacity: 0; transform: translateY(160px) scale(.7) rotate(8deg); } }
+@keyframes opPulse { 50% { transform: scale(1.12); opacity: 1; } }
+.op-inner { position: absolute; inset: 0; transform-style: preserve-3d; transition: transform .6s cubic-bezier(.3, .8, .3, 1); }
+.op-card.flipped .op-inner { transform: rotateY(180deg); }
+.op-face { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; border-radius: 4.2% / 3%; }
+.op-front { transform: rotateY(180deg); }
+.op-front .card { width: 100%; height: 100%; }
+.op-back { display: grid; place-items: center; font-family: "Bebas Neue", sans-serif; font-size: 5rem; color: #ff4fa3aa; border: 3px solid #ff4fa366;
+  background: radial-gradient(circle at 50% 40%, #ff4fa355, transparent 60%), repeating-linear-gradient(45deg, #2a1230 0 10px, #23102a 10px 20px); box-shadow: 0 10px 30px #000a; }
+.op-spark { position: absolute; width: 8px; height: 8px; border-radius: 50%; z-index: 7; pointer-events: none; box-shadow: 0 0 10px currentColor; animation: opSpark .95s ease-out forwards; }
+@keyframes opSpark { to { transform: translate(var(--dx), var(--dy)) scale(.2); opacity: 0; } }
+.op-summary { position: relative; z-index: 4; width: min(980px, 100%); max-height: 100%; overflow-y: auto; padding: 18px 12px 28px; text-align: center; touch-action: pan-y; }
+.op-summary h2 { margin: 0; font-size: 2.2rem; }
+.op-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin: 16px auto; max-width: 760px; }
+.op-mini { position: relative; cursor: zoom-in; animation: opDeal .45s backwards; }
+@media (max-width: 640px) { .op-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; } .op-summary h2 { font-size: 1.7rem; } }
+.op-zoom { position: absolute; inset: 0; z-index: 9; background: rgba(5, 3, 8, .9); display: grid; place-items: center; perspective: 900px; }
+.op-zoom .zcard { width: min(330px, 80vw); transition: transform .1s; }
