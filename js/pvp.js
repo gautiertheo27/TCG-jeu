@@ -34,7 +34,8 @@ export class Sync {
   }
   send(msg) { msg.n = this.outN++; this.sent.push(msg); return Promise.resolve(this.net.send(msg)).catch(() => {}); }
   _recv(m) {
-    if (this.closed) return;
+    if (this.closed || !m || typeof m !== "object") return;
+    if (!["hb", "resend", "act", "ans", "forfeit"].includes(m.k)) return;       // poignée de main et autres : pas pour la synchronisation
     if (m.k === "hb") { if (m.last >= this.inExpected) this.net.send({ k: "resend", from: this.inExpected }); return; }       // il m'en manque : redemande
     if (m.k === "resend") { for (const x of this.sent) if (x.n >= m.from) this.net.send(x); return; }
     if (m.n < this.inExpected) return;                       // déjà reçu

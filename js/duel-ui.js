@@ -4,6 +4,7 @@ import { Game, C, spec, hasResilience } from "./engine/core.js";
 import { aiAnswer, aiTurn } from "./engine/ai.js";
 import { autoDeck, validateDeck, PRESETS, buildPreset } from "./engine/deck.js";
 import { cardHTML } from "./cardview.js";
+import { Sync } from "./pvp.js";
 
 const $ = (s, r = document) => r.querySelector(s);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -13,6 +14,7 @@ const AI_PAIRS = [["Rose", "Orange"], ["Violette", "Mauve"], ["Mauve", "Bleue"],
 export function initDuel({ S, toast, tick, esc }) {
   const setup = $("#duelSetup"), board = $("#duelBoard"), modal = $("#duelModal");
   let g = null, busy = false, turnDone = null, selecting = null, logs = [];
+  let SEAT = 0, OPP = 1, sync = null, onlineEnd = null, oppLeftTimer = null;     // siège du joueur : 0 contre l'IA, 0 ou 1 en ligne
 
   // ---------- écran de préparation ----------
   for (const sel of ["#dcol1", "#dcol2"]) ALL_COLORS.forEach((c) => $(sel).insertAdjacentHTML("beforeend", `<option>${c}</option>`));
@@ -57,7 +59,7 @@ export function initDuel({ S, toast, tick, esc }) {
     }
     const others = PRESETS.filter((p) => p.id !== mine.preset);
     const theirs = buildPreset(others[Math.floor(Math.random() * others.length)].id);
-    logs = []; $("#bdLog").innerHTML = "";
+    logs = []; $("#bdLog").innerHTML = ""; SEAT = 0; OPP = 1; sync = null; $("#btnForfeit").classList.add("hidden");
     g = new Game({
       decks: [mine, theirs], names: ["Toi", "Adversaire"], ai: [0, 1],
       ask: (game, pi, req) => (pi === 0 ? humanAsk(req) : aiAnswer(game, pi, req)),
@@ -83,15 +85,48 @@ export function initDuel({ S, toast, tick, esc }) {
   }
 
   async function finish() {
-    const won = g.winner === 0;
+    const won = g.winner === SEAT; const wasOnline = !!sync;
+    clearTimeout(oppLeftTimer); if (sync) { sync.close(); sync = null; }
+    $("#btnForfeit").classList.add("hidden");
     const { rewarded, promo } = await S.recordDuel(won);
+    if (wasOnline) onlineEnd?.();
     $("#duelEnd").classList.remove("hidden");
     $("#duelEndMsg").innerHTML = won
-      ? `🏆 Victoire !${rewarded ? " <b>+1 booster</b>" : " (récompenses du jour épuisées)"}${promo ? `<br>🎉 Carte promo obtenue : ${esc(promo.name)} (${promo.label})` : ""}`
+      ? `🏆 Victoire${wasOnline ? " contre " + esc(g.P(OPP).name) : ""} !${rewarded ? " <b>+1 booster</b>" : " (récompenses du jour épuisées)"}${promo ? `<br>🎉 Carte promo obtenue : ${esc(promo.name)} (${promo.label})` : ""}`
       : "Défaite… retente ta chance !";
     tick(); render(g);
   }
 
+  // ---------- duel en ligne ----------
+  async function startOnline({ seat, seed, decks, names, net, onEnd }) {
+    SEAT = seat; OPP = 1 - seat; onlineEnd = onEnd; logs = []; $("#bdLog").innerHTML = ""; busy = false; turnDone = null;
+    g = new Game({ decks, names, ai: [0, 0], seed, ask: () => null, onUpdate: render, log: addLog });
+    sync = new Sync({ seat, net, humanAsk, onForfeit: () => { if (g && g.winner === null) { g.lose(OPP, "abandon de l'adversaire"); render(); sync?.close(); } } });
+    sync.attach(g); window.__gmGame = g; window.__gmSync = sync; window.__gmSeat = seat;
+    addLog(`Duel contre ${names[OPP]}. Tu joues ${seat === 0 ? "en premier siège" : "en second siège"}.`);
+    setup.classList.add("hidden"); board.classList.remove("hidden"); $("#duelEnd").classList.add("hidden"); $("#btnForfeit").classList.remove("hidden");
+    render(); await pvpLoop(); return sync;
+  }
+  async function pvpLoop() {
+    try {
+      await g.setup(); render();
+      while (g.winner === null && sync && !sync.closed) {
+        await g.startTurn(); render(); if (g.winner !== null) break;
+        if (g.active === SEAT) { await humanTurn(); if (g.winner !== null || !sync || sync.closed) break; }
+        else { await sync.remoteTurn(); render(); }
+        if (g.winner !== null || !sync || sync.closed) break;
+        await g.endTurn(); render();
+      }
+    } catch (e) { console.error(e); toast("Erreur de jeu : " + e.message); }
+    if (g.winner === null) g.lose(OPP, "l'adversaire a quitté la partie");
+    finish();
+  }
+  // L'adversaire a quitté : s'il ne revient pas en 60 s, la victoire est pour celui qui reste.
+  function opponentLeft() {
+    if (!sync || !g || g.winner !== null || oppLeftTimer) return;
+    toast("Ton adversaire s'est déconnecté. Victoire dans 60 s s'il ne revient pas.");
+    oppLeftTimer = setTimeout(() => { oppLeftTimer = null; if (g && g.winner === null && sync) { g.lose(OPP, "l'adversaire est parti"); render(); sync.close(); if (turnDone) { const r = turnDone; turnDone = null; r(); } } }, 60000);
+  }
   function humanTurn() {
     return new Promise((resolve) => { turnDone = resolve; render(g); });
   }
@@ -115,7 +150,7 @@ export function initDuel({ S, toast, tick, esc }) {
     if (!s) return `<div class="lane empty" data-pi="${pi}" data-lane="${lane}"><span>${lane + 1}</span></div>`;
     const kws = [...g.keywords(s)].map((k) => `<span class="kw">${k[0] + k.slice(1).toLowerCase()}</span>`).join("");
     const objs = s.objets.map((o) => `<span class="obj" title="${esc(C(o).name)}">🔗</span>`).join("");
-    const canAtk = pi === 0 && g.canAttack(0, s) && g.attackOptions(0, s).length;
+    const canAtk = pi === SEAT && g.canAttack(SEAT, s) && g.attackOptions(SEAT, s).length;
     return `<div class="lane${s.engaged ? " engaged" : ""}${canAtk ? " ready" : ""}" data-pi="${pi}" data-lane="${lane}" data-uid="${s.uid}">
       ${cardHTML(C(s))}
       <div class="lane-info"><b class="def">🛡 ${g.defense(s)}</b>${objs}${kws}${s.engaged ? '<span class="eng-badge">engagé</span>' : ""}</div></div>`;
@@ -135,12 +170,12 @@ export function initDuel({ S, toast, tick, esc }) {
   const STEPS = [["entretien", "Entretien"], ["action", "Action"], ["combat", "Combat"], ["fin", "Fin"]];
   function render() {
     if (!g) return;
-    const me = g.P(0), op = g.P(1), myTurn = g.active === 0 && g.winner === null;
+    const me = g.P(SEAT), op = g.P(OPP), myTurn = g.active === SEAT && g.winner === null;
     $("#bdOpp").innerHTML = `<b>${esc(op.name)}</b><span class="hand-backs">${Array.from({ length: op.hand.length }, () => "<i></i>").join("")}</span><span>✋ ${op.hand.length}</span>`;
     $("#bdMe").innerHTML = `<b>Toi</b><span>✋ ${me.hand.length}/5</span><span>❤ PV ${me.pv.length}</span>`;
-    $("#matOpp").innerHTML = matHTML(1); $("#matMe").innerHTML = matHTML(0);
+    $("#matOpp").innerHTML = matHTML(OPP); $("#matMe").innerHTML = matHTML(SEAT);
     $("#bdHand").innerHTML = me.hand.map((c, i) => {
-      const ok = myTurn && !busy && g.phase === "action" && g.canPlay(0, c);
+      const ok = myTurn && !busy && g.phase === "action" && g.canPlay(SEAT, c);
       return `<div class="hcard${ok ? " playable" : ""}" data-i="${i}">${cardHTML(C(c))}</div>`;
     }).join("");
     const phaseName = g.winner !== null ? "Partie terminée" : { entretien: "Entretien", action: "Phase d'action", combat: "Phase de combat", fin: "Fin de tour", setup: "Mise en place" }[g.phase] || "";
@@ -158,32 +193,36 @@ export function initDuel({ S, toast, tick, esc }) {
   board.addEventListener("click", (e) => {
     const pile = e.target.closest('.pile[data-pile="discard"]'); if (!pile) return;
     const pi = +pile.closest("[data-pi]").dataset.pi, cs = g.P(pi).discard;
-    openModal(`<h3>Défausse ${pi === 0 ? "(toi)" : "(adversaire)"} · ${cs.length} carte${cs.length > 1 ? "s" : ""}</h3>${cs.length ? `<div class="pick-row">${[...cs].reverse().map((c) => `<div class="pick">${cardHTML(C(c))}</div>`).join("")}</div>` : '<p class="muted">Vide.</p>'}<div class="btn-col"><button class="btn" data-close>Fermer</button></div>`);
+    openModal(`<h3>Défausse ${pi === SEAT ? "(toi)" : "(adversaire)"} · ${cs.length} carte${cs.length > 1 ? "s" : ""}</h3>${cs.length ? `<div class="pick-row">${[...cs].reverse().map((c) => `<div class="pick">${cardHTML(C(c))}</div>`).join("")}</div>` : '<p class="muted">Vide.</p>'}<div class="btn-col"><button class="btn" data-close>Fermer</button></div>`);
   });
 
   // ---------- actions du joueur ----------
-  $("#btnCombat").addEventListener("click", () => { if (g.phase === "action" && !busy) { g.phase = "combat"; render(); } });
-  $("#btnEnd").addEventListener("click", () => { if (turnDone && !busy) { const r = turnDone; turnDone = null; r(); } });
+  $("#btnCombat").addEventListener("click", () => { if (g.phase === "action" && !busy) { g.beginCombat(); render(); } });
+  $("#btnEnd").addEventListener("click", () => { if (turnDone && !busy) { sync?.sendEnd(); const r = turnDone; turnDone = null; r(); } });
+  $("#btnForfeit").addEventListener("click", () => { if (sync && g && g.winner === null && confirm("Abandonner la partie ? Tu perds le duel.")) { sync.forfeit(); g.lose(SEAT, "abandon"); render(); if (turnDone) { const r = turnDone; turnDone = null; r(); } } });
 
-  async function run(fn) { if (busy) return; busy = true; render(); try { await fn(); } finally { busy = false; render(); } }
+  async function run(fn) {
+    if (busy) return; busy = true; render();
+    try { await fn(); } finally { busy = false; render(); if (g && g.winner !== null && turnDone) { const r = turnDone; turnDone = null; r(); } }   // la partie peut se terminer pendant mon action
+  }
 
   $("#bdHand").addEventListener("click", (e) => {
     const el = e.target.closest(".hcard"); if (!el) return;
-    const c = g.P(0).hand[+el.dataset.i]; if (!c) return;
-    const myTurn = g.active === 0 && g.phase === "action" && g.winner === null;
+    const c = g.P(SEAT).hand[+el.dataset.i]; if (!c) return;
+    const myTurn = g.active === SEAT && g.phase === "action" && g.winner === null;
     const card = C(c);
     const buttons = [];
-    if (myTurn && g.canPlay(0, c)) {
-      if (card.category === "Joueur" && g.freeLanes(0).length) g.freeLanes(0).forEach((l) => buttons.push({ label: `Jouer en case ${l + 1}`, primary: true, fn: () => run(() => g.playFromHand(0, c, { lane: l })) }));
-      else buttons.push({ label: card.category === "Joueur" ? "Jouer (bench un Joueur non engagé)" : "Jouer", primary: true, fn: () => run(() => g.playFromHand(0, c)) });
+    if (myTurn && g.canPlay(SEAT, c)) {
+      if (card.category === "Joueur" && g.freeLanes(SEAT).length) g.freeLanes(SEAT).forEach((l) => buttons.push({ label: `Jouer en case ${l + 1}`, primary: true, fn: () => run(() => g.playFromHand(SEAT, c, { lane: l })) }));
+      else buttons.push({ label: card.category === "Joueur" ? "Jouer (bench un Joueur non engagé)" : "Jouer", primary: true, fn: () => run(() => g.playFromHand(SEAT, c)) });
     } else if (myTurn) buttons.push({ label: playHint(c), disabled: true });
     sheet(c, buttons);
   });
   function playHint(c) {
     const k = C(c);
-    if (k.category === "Coach" && g.P(0).coachPlayed) return "Une seule carte Coach par tour";
-    if (k.category !== "Joueur" && k.color !== "Neutre" && !g.hasEssenceColor(0, k.color)) return `Il faut une Essence ${k.color} déployée`;
-    if (k.category === "Objet" && !g.slots(0).length) return "Aucun Joueur à qui lier l'Objet";
+    if (k.category === "Coach" && g.P(SEAT).coachPlayed) return "Une seule carte Coach par tour";
+    if (k.category !== "Joueur" && k.color !== "Neutre" && !g.hasEssenceColor(SEAT, k.color)) return `Il faut une Essence ${k.color} déployée`;
+    if (k.category === "Objet" && !g.slots(SEAT).length) return "Aucun Joueur à qui lier l'Objet";
     return "Injouable pour l'instant";
   }
 
@@ -191,13 +230,13 @@ export function initDuel({ S, toast, tick, esc }) {
     const lane = e.target.closest(".lane[data-uid]"); if (!lane || e.target.closest("#bdHand")) return;
     const pi = +lane.dataset.pi, s = g.P(pi).lanes[+lane.dataset.lane]; if (!s) return;
     const buttons = [];
-    if (pi === 0 && g.active === 0 && !busy) {
-      if (g.phase === "combat" && g.canAttack(0, s)) {
-        const opts = g.attackOptions(0, s);
+    if (pi === SEAT && g.active === SEAT && !busy) {
+      if (g.phase === "combat" && g.canAttack(SEAT, s)) {
+        const opts = g.attackOptions(SEAT, s);
         if (!opts.length) buttons.push({ label: "Pas assez d'Essences pour attaquer", disabled: true });
-        for (const i of opts) buttons.push({ label: `⚔ ${C(s).attacks[i].name} — ${g.attackValue(s, i)}${costStr(g.attackCost(0, s, i))}`, primary: true, fn: () => run(() => g.attack(0, s, i)) });
+        for (const i of opts) buttons.push({ label: `⚔ ${C(s).attacks[i].name} — ${g.attackValue(s, i)}${costStr(g.attackCost(SEAT, s, i))}`, primary: true, fn: () => run(() => g.attack(SEAT, s, i)) });
       } else if (g.phase === "combat") buttons.push({ label: s.engaged ? "Joueur engagé : ne peut pas attaquer" : "Ne peut pas attaquer ce tour", disabled: true });
-      if (g.activables(0).includes(s)) buttons.push({ label: "Activer : engager pour bench un Joueur adverse", fn: () => run(() => g.activate(0, s)) });
+      if (g.activables(SEAT).includes(s)) buttons.push({ label: "Activer : engager pour bench un Joueur adverse", fn: () => run(() => g.activate(SEAT, s)) });
     }
     sheet({ id: s.id, uid: s.uid }, buttons, s);
   });
@@ -261,5 +300,14 @@ export function initDuel({ S, toast, tick, esc }) {
   }
 
   updateNote();
-  return { showSetup };
+  // Decks pour les duels en ligne (mêmes règles que contre l'IA)
+  const deckOptions = () => [...PRESETS.map((p) => ({ value: "preset:" + p.id, label: "Prêté · " + p.name })), { value: "collection", label: "Mon deck (ma collection)" }];
+  const deckFor = (v) => { const { deck } = (() => { if (v === "collection") return chosenDeckFrom("collection"); return { deck: buildPreset(v.slice(7)) }; })(); return deck; };
+  function chosenDeckFrom(v) { const colors = [...new Set([$("#dcol1").value, $("#dcol2").value])]; return { deck: autoDeck(colors, S.get().collection) }; }
+  function deckProblems(deck) {
+    const errs = validateDeck(deck).filter((e) => !e.startsWith("Conseil"));
+    if (deck.club.some((id) => !BY_ID[id]) || deck.reserve.some((id) => !BY_ID[id])) errs.push("Carte inconnue dans le deck.");
+    return errs;
+  }
+  return { showSetup, startOnline, opponentLeft, deckOptions, deckFor, deckProblems, isPlaying: () => !!g && g.winner === null && !board.classList.contains("hidden") };
 }

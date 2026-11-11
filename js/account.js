@@ -2,6 +2,8 @@
 // Le stock de boosters et la collection sont gérés par le serveur (fonctions SQL sécurisées).
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "./config.js";
 
+import { realNet, localNet } from "./pvp-net.js";
+export const makeNet = () => (window.__gmFakeSupabase ? localNet() : realNet(sb));      // test : deux onglets du même navigateur
 export const configured = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
 const SDK = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/+esm";
 let sb = null;
@@ -40,6 +42,11 @@ export const api = {
   openBooster: () => rpc("open_booster"),
   recordDuel: (won) => rpc("record_duel", { won }),
   importLocal: (save) => rpc("import_local", { save }),
+  searchPlayers: (q) => rpc("search_players", { q }),
+  friendsList: () => rpc("friends_list"),
+  friendRequest: (target) => rpc("friend_request", { target }),
+  friendRespond: (other, accept) => rpc("friend_respond", { other, accept }),
+  friendRemove: (other) => rpc("friend_remove", { other }),
   setUsername: async (username, uid) => { fail((await sb.from("profiles").update({ username }).eq("id", uid)).error); },
 };
 

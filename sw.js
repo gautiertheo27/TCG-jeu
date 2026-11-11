@@ -1,6 +1,6 @@
 // Service worker : jeu jouable hors ligne (appli installée sur PC, tablette, téléphone).
-const VERSION = "gmtcg-v8";
-const SHELL = ["./", "index.html", "css/style.css", "js/app.js", "js/state.js", "js/cards.js", "js/cards-data.js", "js/cardview.js", "js/opening.js", "js/sound.js", "js/account.js", "js/config.js", "js/duel-ui.js", "js/engine/core.js", "js/engine/effects.js", "js/engine/ai.js", "js/engine/deck.js",
+const VERSION = "gmtcg-v9";
+const SHELL = ["./", "index.html", "css/style.css", "js/app.js", "js/state.js", "js/cards.js", "js/cards-data.js", "js/cardview.js", "js/opening.js", "js/friends.js", "js/pvp.js", "js/pvp-net.js", "js/sound.js", "js/account.js", "js/config.js", "js/duel-ui.js", "js/engine/core.js", "js/engine/effects.js", "js/engine/ai.js", "js/engine/deck.js",
   "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png"];
 
 self.addEventListener("install", (e) => {

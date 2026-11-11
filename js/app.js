@@ -5,6 +5,7 @@ import { initDuel } from "./duel-ui.js";
 import { playOpening, isOpening, abortOpening } from "./opening.js";
 import { unlock, isMuted, setMuted, sfx } from "./sound.js";
 import { configured, initAccount, auth, api, providerLabel, enabledProviders } from "./account.js";
+import { initFriends } from "./friends.js";
 
 const $ = (s) => document.querySelector(s);
 
@@ -28,6 +29,7 @@ function showTab(name) {
   if (name === "duel") renderDuelSetup();
   if (name === "profil") renderProfile();
   if (name === "livre") renderBook();
+  if (name === "amis") friendsUI.refresh();
 }
 
 let toastTimer;
@@ -213,6 +215,7 @@ document.addEventListener("keydown", (e) => { if (e.key === "Escape") $("#zoom")
 
 // ---------- Duel (règles officielles) ----------
 const duelUI = initDuel({ S, toast, tick, esc });
+const friendsUI = initFriends({ S, toast, esc, duel: duelUI, modal: (...x) => modal(...x), closeModal: () => closeModal(), showTab: (n) => showTab(n) });
 function renderDuelSetup() { duelUI.showSetup(); }
 
 // ---------- Profil ----------
@@ -310,12 +313,13 @@ $("#accountBtn").addEventListener("click", () => (session ? (showTab("profil")) 
 async function onSession(sess) {
   if (!sess) {
     session = null; S.leaveRemote(required);                    // compte obligatoire : plus de collection visible tant qu'on n'est pas reconnecté
-    abortOpening(); $("#zoom").classList.add("hidden"); duelUI.showSetup(); showTab("boosters"); refreshAll();
+    friendsUI.stop(); abortOpening(); $("#zoom").classList.add("hidden"); duelUI.showSetup(); showTab("boosters"); refreshAll();
     if (required) showAuth("signin");
     return;
   }
   try {
     const st = await api.getState(); session = sess; S.enterRemote(api, st); closeModal(); refreshAll();
+    friendsUI.start(sess.user, st.profile?.username || sess.user.email?.split("@")[0]);
     const local = S.localSnapshot(), n = Object.keys(local.collection || {}).length;
     if (n > 0 && !st.imported && !Object.keys(st.collection).length && !st.stats.opened) offerImport(local, n);
     else if (st.welcome) toast(`🎁 Bienvenue ${st.profile?.username || ""} ! 10 boosters offerts`);

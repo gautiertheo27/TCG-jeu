@@ -23,6 +23,7 @@
       <button data-tab="boosters" class="active">Boosters</button>
       <button data-tab="collection">Collection</button>
       <button data-tab="duel">Duel</button>
+      <button data-tab="amis">Amis <span id="friBadge" class="badge-n hidden">0</span></button>
       <button data-tab="livre">Livre</button>
       <button data-tab="profil">Profil</button>
     </nav>
@@ -87,6 +88,18 @@
       <div id="collGrid" class="grid"></div>
     </section>
 
+    <!-- AMIS -->
+    <section id="tab-amis" class="tab">
+      <h2>Amis &amp; défis</h2>
+      <p class="muted">Cherche un joueur par son pseudo, ajoute-le en ami, puis défie-le en duel quand il est en ligne (🟢). <span id="friCount"></span></p>
+      <div class="filters fri-search"><input id="friSearch" type="search" placeholder="Pseudo d'un joueur…" maxlength="24"><button id="friSearchBtn" class="btn primary">Chercher</button></div>
+      <div id="friResults" class="fri-list"></div>
+      <h3>Demandes reçues</h3><div id="friIncoming" class="fri-list"></div>
+      <h3>Mes amis</h3><div id="friList" class="fri-list"></div>
+      <h3>Autres joueurs en ligne</h3><div id="friOnline" class="fri-list"></div>
+      <h3>Demandes envoyées</h3><div id="friOutgoing" class="fri-list"></div>
+    </section>
+
     <!-- LIVRE -->
     <section id="tab-livre" class="tab">
       <h2>Livre des cartes</h2>
@@ -127,7 +140,7 @@
           <div class="mat me" id="matMe"></div>
           <div class="pm-bar" id="bdMe"></div>
         </div>
-        <div class="bd-controls"><span class="bd-actions"><button id="btnCombat" class="btn hidden">⚔ Phase de combat</button><button id="btnEnd" class="btn primary hidden">Passer le tour ▶</button></span></div>
+        <div class="bd-controls"><span class="bd-actions"><button id="btnForfeit" class="btn danger hidden">🏳 Abandonner</button><button id="btnCombat" class="btn hidden">⚔ Phase de combat</button><button id="btnEnd" class="btn primary hidden">Passer le tour ▶</button></span></div>
         <div class="bd-hand" id="bdHand"></div>
         <div id="duelEnd" class="duel-end hidden"><p id="duelEndMsg"></p><button id="duelAgain" class="btn primary">Rejouer</button></div>
         <details class="bd-logbox" open><summary>Journal</summary><div id="bdLog" class="bd-log"></div></details>

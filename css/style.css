@@ -400,3 +400,14 @@ body.no-scroll { overflow: hidden; }
 .bk-chance { text-align: right; display: flex; flex-direction: column; gap: 1px; min-width: 96px; } .bk-chance b { font-size: 1.15rem; color: var(--pink2); }
 .bk-own { color: #3fbf7f; font-size: .72rem; font-weight: 800; }
 @media (max-width: 640px) { .bk-list { grid-template-columns: 1fr; } .tabs button { padding: 8px 10px; } }
+
+/* ---------- Amis & défis ---------- */
+.badge-n { background: var(--pink); color: #fff; font-size: .68rem; font-weight: 800; border-radius: 999px; padding: 1px 6px; margin-left: 2px; }
+.fri-search { margin: 12px 0; } .fri-search input { flex: 1; min-width: 160px; }
+.fri-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 6px; }
+.fri-row { display: flex; align-items: center; gap: 10px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 8px 12px; }
+.fri-av { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; flex: none; background: #2a2338; display: grid; place-items: center; } .fri-av.ph { font-size: 1rem; }
+.fri-row b { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fri-btns { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+.btn.sm { padding: 5px 10px; font-size: .82rem; min-height: 32px; }
+#tab-amis h3 { margin-top: 1.2em; }
