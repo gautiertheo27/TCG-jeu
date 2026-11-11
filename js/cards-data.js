@@ -3092,5 +3092,139 @@ export const CARD_DATA = [
 "flavor": "Elle a commencé.",
 "illustrator": "Claude (IA) · fan-made",
 "img": "cartes/P10.webp"
+},
+{
+"id": "P11",
+"label": "P11",
+"n": 1011,
+"name": "Allo MW4",
+"category": "Joueur",
+"subtype": null,
+"color": "Neutre",
+"def": 70,
+"stars": 3,
+"rarity": "P",
+"printedRarity": "P",
+"attacks": [
+{
+"name": "Lancer de caillou",
+"cost": [
+"Neutre"
+],
+"damage": 60,
+"text": null
+}
+],
+"power": 60,
+"effect": "SIGNATURE: Lorsque ce Joueur est déployé, défaussez 1 carte puis piochez 1 carte.",
+"flavor": "Pas de jeu, pas de souci.",
+"illustrator": "Claude (IA) · fan-made",
+"img": "cartes/P11.webp"
+},
+{
+"id": "P12",
+"label": "P12",
+"n": 1012,
+"name": "Syqro",
+"category": "Joueur",
+"subtype": null,
+"color": "Neutre",
+"def": 150,
+"stars": 5,
+"rarity": "P",
+"printedRarity": "P",
+"attacks": [
+{
+"name": "Double biceps",
+"cost": [
+"Neutre",
+"Neutre",
+"Neutre"
+],
+"damage": 150,
+"text": null
+}
+],
+"power": 150,
+"effect": "GARDE: Ce Joueur peut défendre n'importe quelle attaque.",
+"flavor": "Sy gros.",
+"illustrator": "Claude (IA) · fan-made",
+"img": "cartes/P12.webp"
+},
+{
+"id": "P13",
+"label": "P13",
+"n": 1013,
+"name": "Lavipère",
+"category": "Joueur",
+"subtype": null,
+"color": "Neutre",
+"def": 80,
+"stars": 5,
+"rarity": "P",
+"printedRarity": "P",
+"attacks": [
+{
+"name": "Morsure venimeuse",
+"cost": [
+"Neutre",
+"Neutre"
+],
+"damage": 90,
+"text": "Engagez un Joueur adverse."
+}
+],
+"power": 90,
+"effect": null,
+"flavor": "Sssss…",
+"illustrator": "Claude (IA) · fan-made",
+"img": "cartes/P13.webp"
+},
+{
+"id": "P14",
+"label": "P14",
+"n": 1014,
+"name": "Lone",
+"category": "Joueur",
+"subtype": null,
+"color": "Neutre",
+"def": 100,
+"stars": 5,
+"rarity": "P",
+"printedRarity": "P",
+"attacks": [
+{
+"name": "Coup de casquette",
+"cost": [
+"Neutre"
+],
+"damage": 90,
+"text": null
+}
+],
+"power": 90,
+"effect": "BUFF: Vos autres Joueurs ont +10 Attaque.",
+"flavor": "Une casquette, un style.",
+"illustrator": "Claude (IA) · fan-made",
+"img": "cartes/P14.webp"
+},
+{
+"id": "P15",
+"label": "P15",
+"n": 1015,
+"name": "GTA VI",
+"category": "Moment",
+"subtype": "Instant",
+"color": "Neutre",
+"def": null,
+"stars": 0,
+"rarity": "P",
+"printedRarity": "P",
+"attacks": [],
+"power": 0,
+"effect": "Regardez les 5 cartes du dessus de votre Club et ajoutez une carte à votre main. Remettez les autres en dessous de votre Club. | Résilience: Piochez 1 carte.",
+"flavor": "Plus que quelques années.",
+"illustrator": "Claude (IA) · fan-made",
+"img": "cartes/P15.webp"
 }
 ];

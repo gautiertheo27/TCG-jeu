@@ -220,6 +220,10 @@ export const SPECS = {
   P05: { legionFree: true },
   // Cartes fan-made
   P07: { onDeploy: async (g, s, pi) => { await g.draw(pi, 1); } },                                  // Nyzer le BG
+  P11: { onDeploy: async (g, s, pi) => { if (g.P(pi).hand.length) await discardFromHand(g, pi, 1, "Allo MW4 : défaussez une carte"); await g.draw(pi, 1); } },   // Allo MW4
+  P13: { attackFx: { 0: async (g, s, pi) => { const t = await pickEnemy(g, pi, "Morsure venimeuse : engagez un Joueur adverse", (x) => !x.engaged); if (t) await g.engage(t); } } },   // Lavipère
+  P14: { buffAtk: 10 },
+  P15: { play: (g, pi) => revealTake(g, pi, 5, () => true, "GTA VI : ajoutez une carte à votre main", "bottom"), resilience: (g, pi) => g.draw(pi, 1) },   // GTA VI                                                                                  // Lone
   P08: { atk: () => 30, def: () => -20,                                                             // Le compte bancaire (-500 €)
     resilience: async (g, pi) => { await g.draw(pi, 2); await discardFromHand(g, pi, 1); } },
   P06: { riposteFree: true },
