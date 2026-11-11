@@ -218,6 +218,10 @@ export const SPECS = {
     1: (g, s, pi) => shuffleEssences(g, pi, "Mauve", 2) } },
   "GM1-117": { onDeploy: async (g, s, pi) => { const bd = allies(g, pi, (x) => /Baby Driver/i.test(C(x).name))[0]; if (bd) await g.removeJoueur(bd); await g.draw(pi, 3); } },
   P05: { legionFree: true },
+  // Cartes fan-made
+  P07: { onDeploy: async (g, s, pi) => { await g.draw(pi, 1); } },                                  // Nyzer le BG
+  P08: { atk: () => 30, def: () => -20,                                                             // Le compte bancaire (-500 €)
+    resilience: async (g, pi) => { await g.draw(pi, 2); await discardFromHand(g, pi, 1); } },
   P06: { riposteFree: true },
 
   // ===== Neutre — Coach =====

@@ -2987,5 +2987,53 @@ export const CARD_DATA = [
 "flavor": "Merci, Ô grand Squeezie, pour ta générosité",
 "illustrator": "Gobli Prin",
 "img": "cartes/P06.webp"
+},
+{
+"id": "P07",
+"label": "P07",
+"n": 1007,
+"name": "Nyzer le BG",
+"category": "Joueur",
+"subtype": null,
+"color": "Neutre",
+"def": 120,
+"stars": 10,
+"rarity": "P",
+"printedRarity": "P",
+"attacks": [
+{
+"name": "Aura de BG",
+"cost": [
+"Neutre",
+"Neutre"
+],
+"damage": 130,
+"text": null
+}
+],
+"power": 130,
+"effect": "SIGNATURE: Lorsque ce Joueur est déployé, piochez 1 carte.",
+"flavor": "Le BG, c'est lui.",
+"illustrator": "Claude (IA) · fan-made",
+"img": "cartes/P07.webp"
+},
+{
+"id": "P08",
+"label": "P08",
+"n": 1008,
+"name": "Le compte bancaire",
+"category": "Objet",
+"subtype": "Lien",
+"color": "Neutre",
+"def": null,
+"stars": 0,
+"rarity": "P",
+"printedRarity": "P",
+"attacks": [],
+"power": 0,
+"effect": "Ce Joueur a +30 Attaque et -20 Défense. Découvert autorisé : tant que ça tient… | Résilience: Piochez 2 cartes, puis défaussez 1 carte.",
+"flavor": "-500 €, on assume.",
+"illustrator": "Claude (IA) · fan-made",
+"img": "cartes/P08.webp"
 }
 ];

@@ -29,17 +29,18 @@ export async function playOpening({ pulls, packSrc, quick = false, canAgain = fa
     </div>
     <div class="op-hint">Touche le paquet, ou glisse sur son haut, pour l'ouvrir ➜</div>
     <div class="op-count hidden"></div>
-    <button class="op-skip btn" type="button">Tout révéler ⏭</button>
+    <button class="op-skip btn" type="button">Révélation rapide ⏩</button>
     <div class="op-summary hidden"></div>`;
   const q = (s) => $(s, root);
   let finish; const done = new Promise((r) => (finish = r));
-  let again = false;
+  let again = false, ended = false, fast = false, ctl = null;
 
   const hint = (t) => (q(".op-hint").textContent = t);
   const flash = (strong) => { const f = q(".op-flash"); f.classList.remove("on", "strong"); void f.offsetWidth; f.classList.add("on"); if (strong) f.classList.add("strong"); };
 
   // ---------- étape 3 : récapitulatif ----------
   function summary() {
+    if (ended) return; ended = true; fast = false;
     q(".op-stage").classList.add("hidden"); q(".op-hint").classList.add("hidden"); q(".op-count").classList.add("hidden"); q(".op-skip").classList.add("hidden");
     const nNew = pulls.filter((p) => p.isNew).length;
     const best = pulls.reduce((b, p) => (RARITIES[BY_ID[p.id].rarity].order > RARITIES[BY_ID[b.id].rarity].order ? p : b), pulls[0]);
@@ -106,7 +107,21 @@ export async function playOpening({ pulls, packSrc, quick = false, canAgain = fa
   pack.addEventListener("pointercancel", () => { drag = null; top.style.transition = "transform .25s"; top.style.transform = ""; });
   pack.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") tear(); });
   pack.tabIndex = 0;
-  q(".op-skip").addEventListener("click", () => summary());
+  // Révélation rapide : les cartes défilent l'une après l'autre (retournée, puis écartée), comme une main qui les passe vite.
+  // Les grosses cartes (Épique, Légendaire…) restent un peu plus longtemps pour garder le son et l'effet. Un 2e clic passe au récapitulatif.
+  const HOLD = { ES: 120, C: 130, PC: 160, R: 380, E: 1000, L: 1200, S: 1200, P: 1200 };
+  q(".op-skip").addEventListener("click", async () => {
+    if (fast || ended) { summary(); return; }
+    fast = true; q(".op-skip").textContent = "Passer ⏭";
+    if (!torn) await tear();
+    q(".op-stack").style.pointerEvents = "none"; hint("Révélation rapide…");
+    while (fast && !ended && idx < total) {
+      const c = ctl; if (!c) break;
+      await c.flip(true); if (!fast || ended) break;
+      await sleep(HOLD[BY_ID[pulls[idx].id].rarity] ?? 140); if (!fast || ended) break;
+      await c.dismiss(1, true);
+    }
+  });
 
   // ---------- étape 2 : les cartes empilées ----------
   let idx = 0; const total = pulls.length; let cards = [];
@@ -136,21 +151,21 @@ export async function playOpening({ pulls, packSrc, quick = false, canAgain = fa
     const el = cards[idx]; if (!el) return;
     let flipped = false, g = null, busy = false;
     el.classList.add("top");
-    const flip = async () => {
+    const flip = async (quick = false) => {
       if (flipped || busy) return; busy = true; flipped = true;
       const c = BY_ID[pulls[idx].id];
       el.classList.add("flipped"); sfx.flip(c.rarity); try { navigator.vibrate?.(RARE.has(c.rarity) ? [20, 40, 30] : 10); } catch (_) {}
-      await sleep(330);
+      await sleep(quick ? 150 : 330);
       if (BIG.has(c.rarity)) { burst(el, RARITIES[c.rarity].color); flash(c.rarity !== "R"); root.classList.add("shake"); setTimeout(() => root.classList.remove("shake"), 450); }
-      hint(idx === total - 1 ? "Touche pour voir le récapitulatif" : "Touche ou glisse pour passer à la suivante");
+      if (!fast) hint(idx === total - 1 ? "Touche pour voir le récapitulatif" : "Touche ou glisse pour passer à la suivante");
       busy = false;
     };
-    const dismiss = async (dir) => {
+    const dismiss = async (dir, quick = false) => {
       if (busy) return; busy = true;
-      sfx.dismiss(); el.style.transition = "transform .45s ease-in, opacity .45s"; el.style.transform = `translate(${dir * 130}vw, -40px) rotate(${dir * 24}deg)`; el.style.opacity = "0";
-      await sleep(380); el.remove(); idx++;
+      sfx.dismiss(); el.style.transition = quick ? "transform .2s ease-in, opacity .2s" : "transform .45s ease-in, opacity .45s"; el.style.transform = `translate(${dir * 130}vw, -40px) rotate(${dir * 24}deg)`; el.style.opacity = "0";
+      await sleep(quick ? 190 : 380); el.remove(); idx++;
       if (idx >= total) { summary(); return; }
-      updateCount(); hint("Touche la carte pour la retourner"); arm();
+      updateCount(); if (!fast) hint("Touche la carte pour la retourner"); arm();
     };
     const onDown = (e) => { g = { x: e.clientX, y: e.clientY, moved: 0 }; el.setPointerCapture(e.pointerId); el.style.transition = "none"; };
     const onMove = (e) => {
@@ -167,7 +182,7 @@ export async function playOpening({ pulls, packSrc, quick = false, canAgain = fa
     el.addEventListener("pointerdown", onDown); el.addEventListener("pointermove", onMove); el.addEventListener("pointerup", onUp); el.addEventListener("pointercancel", () => { g = null; el.style.transition = "transform .25s"; el.style.transform = ""; });
     el.tabIndex = 0; el.focus?.({ preventScroll: true });
     el.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); flipped ? dismiss(1) : flip(); } });
-    // « Tout révéler » doit aussi marcher en cours de route
+    ctl = { flip, dismiss };
   }
 
   function burst(el, color) {
