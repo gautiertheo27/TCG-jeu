@@ -129,7 +129,7 @@
         </div>
         <p id="dsrcNote" class="muted small"></p>
         <div class="btn-row"><button id="duelPreview" class="btn">👁 Voir les cartes du deck</button></div>
-        <div class="btn-row"><button id="duelStart" class="btn primary">Lancer le duel</button></div>
+        <div class="btn-row"><button id="duelStart" class="btn primary">Lancer le duel</button><button id="duelTuto" class="btn">🎓 Mode tuto : apprendre à jouer</button></div>
         <p class="muted small">Les decks préconstruits sont <b>prêtés pour la manche</b> : ce sont de bons decks de départ, sans carte Épique ni Légendaire, et leurs cartes ne rejoignent pas ta collection. Victoire = +1 booster (3 par jour max) et 15 % de chance d'obtenir une carte Promo. Les Objets, Coachs et Moments demandent une Essence de leur couleur sur le Terrain.</p>
       </div>
       <div id="duelBoard" class="hidden">
@@ -141,6 +141,7 @@
           <div class="pm-bar" id="bdMe"></div>
         </div>
         <div class="bd-controls"><span class="bd-actions"><button id="btnForfeit" class="btn danger hidden">🏳 Abandonner</button><button id="btnCombat" class="btn hidden">⚔ Phase de combat</button><button id="btnEnd" class="btn primary hidden">Passer le tour ▶</button></span></div>
+        <div id="tutoBar" class="tuto-bar hidden"><div class="tuto-head"><b>🎓 Tuto</b><button id="tutoQuit" class="btn small">Quitter</button></div><p id="tutoText"></p></div>
         <div class="bd-hand" id="bdHand"></div>
         <div id="duelEnd" class="duel-end hidden"><p id="duelEndMsg"></p><button id="duelAgain" class="btn primary">Rejouer</button></div>
         <details class="bd-logbox" open><summary>Journal</summary><div id="bdLog" class="bd-log"></div></details>

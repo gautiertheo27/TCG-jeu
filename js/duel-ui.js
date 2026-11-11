@@ -6,6 +6,7 @@ import { autoDeck, validateDeck, PRESETS, buildPreset } from "./engine/deck.js";
 import { cardHTML } from "./cardview.js";
 import { Sync } from "./pvp.js";
 import { makeFx } from "./duel-fx.js";
+import { TUTO_PAGES, tutoHint } from "./tuto.js";
 
 const $ = (s, r = document) => r.querySelector(s);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -15,6 +16,7 @@ const AI_PAIRS = [["Rose", "Orange"], ["Violette", "Mauve"], ["Mauve", "Bleue"],
 export function initDuel({ S, toast, tick, esc }) {
   const setup = $("#duelSetup"), board = $("#duelBoard"), modal = $("#duelModal");
   let g = null, busy = false, turnDone = null, selecting = null, logs = [];
+  let tuto = false;
   let SEAT = 0, OPP = 1, sync = null, onlineEnd = null, oppLeftTimer = null;     // siège du joueur : 0 contre l'IA, 0 ou 1 en ligne
 
   // ---------- écran de préparation ----------
@@ -22,7 +24,9 @@ export function initDuel({ S, toast, tick, esc }) {
   $("#dcol1").value = "Rose"; $("#dcol2").value = "Mauve";
   $("#dsrc").innerHTML = PRESETS.map((p) => `<option value="preset:${p.id}">Prêté · ${esc(p.name)}</option>`).join("") + '<option value="collection">Mon deck (ma collection)</option>';
   $("#dsrc").addEventListener("change", updateNote);
-  $("#duelStart").addEventListener("click", start);
+  $("#duelStart").addEventListener("click", () => { tuto = false; start(); });
+  $("#duelTuto").addEventListener("click", openTuto);
+  $("#tutoQuit").addEventListener("click", () => { tuto = false; $("#tutoBar").classList.add("hidden"); dropAsk(); showSetup(); });
   $("#duelAgain").addEventListener("click", showSetup);
   $("#duelPreview").addEventListener("click", previewDeck);
 
@@ -56,11 +60,11 @@ export function initDuel({ S, toast, tick, esc }) {
 
   async function start() {
     dropAsk();
-    const { deck: mine, custom } = chosenDeck();
+    const { deck: mine, custom } = tuto ? { deck: buildPreset(PRESETS[0].id), custom: false } : chosenDeck();
     if (mine.club.length < 40 || mine.reserve.length < 10) {
       toast(`Collection insuffisante : ${mine.club.length}/40 cartes, ${mine.reserve.length}/10 Essences. Ouvre des boosters ou choisis un deck prêté.`); return;
     }
-    const others = PRESETS.filter((p) => p.id !== mine.preset);
+    const others = tuto ? PRESETS.filter((p) => p.id !== PRESETS[0].id) : PRESETS.filter((p) => p.id !== mine.preset);
     const theirs = buildPreset(others[Math.floor(Math.random() * others.length)].id);
     logs = []; $("#bdLog").innerHTML = ""; SEAT = 0; OPP = 1; sync = null; $("#btnForfeit").classList.add("hidden");
     g = new Game({
@@ -93,13 +97,13 @@ export function initDuel({ S, toast, tick, esc }) {
     const won = g.winner === SEAT; const wasOnline = !!sync;
     clearTimeout(oppLeftTimer); if (sync) { sync.close(); sync = null; }
     $("#btnForfeit").classList.add("hidden");
-    const { rewarded, promo } = await S.recordDuel(won);
+    const { rewarded, promo } = tuto ? { rewarded: false, promo: null } : await S.recordDuel(won);
     if (wasOnline) onlineEnd?.();
     $("#duelEnd").classList.remove("hidden");
     $("#duelEndMsg").innerHTML = won
-      ? `🏆 Victoire${wasOnline ? " contre " + esc(g.P(OPP).name) : ""} !${rewarded ? " <b>+1 booster</b>" : " (récompenses du jour épuisées)"}${promo ? `<br>🎉 Carte promo obtenue : ${esc(promo.name)} (${promo.label})` : ""}`
-      : "Défaite… retente ta chance !";
-    tick(); render(g);
+      ? `🏆 Victoire${wasOnline ? " contre " + esc(g.P(OPP).name) : ""} !${tuto ? " Tuto réussi : tu connais les bases, lance un vrai duel !" : rewarded ? " <b>+1 booster</b>" : " (récompenses du jour épuisées)"}${promo ? `<br>🎉 Carte promo obtenue : ${esc(promo.name)} (${promo.label})` : ""}`
+      : tuto ? "Tuto terminé (pas de récompense). Relance-le ou joue un vrai duel !" : "Défaite… retente ta chance !";
+    tick(); tuto = false; render(g); $("#tutoBar").classList.add("hidden");
   }
 
   // ---------- duel en ligne ----------
@@ -194,6 +198,28 @@ export function initDuel({ S, toast, tick, esc }) {
     $("#btnEnd").classList.toggle("hidden", !(myTurn && (g.phase === "action" || g.phase === "combat")));
     $("#btnEnd").textContent = g.phase === "combat" ? "Fin de tour ▶" : "Passer le tour ▶";
     $("#btnCombat").disabled = busy; $("#btnEnd").disabled = busy;
+    renderTuto(myTurn);
+  }
+
+  // ---------- mode tuto ----------
+  function openTuto() {
+    let i = 0;
+    const page = () => {
+      const p = TUTO_PAGES[i], last = i === TUTO_PAGES.length - 1;
+      openModal(`<h3>🎓 ${esc(p.title)} <small class="muted">(${i + 1}/${TUTO_PAGES.length})</small></h3><div class="tuto-page">${p.html}</div>
+        <div class="btn-row center">${i ? '<button class="btn" data-prev>◀ Précédent</button>' : ""}<button class="btn primary" data-next>${last ? "Commencer la partie guidée ▶" : "Suivant ▶"}</button><button class="btn" data-close>Fermer</button></div>`, (el) => {
+        el.querySelector("[data-prev]")?.addEventListener("click", () => { i--; page(); });
+        el.querySelector("[data-next]").addEventListener("click", () => { if (last) { closeModal(); tuto = true; start(); } else { i++; page(); } });
+      });
+    };
+    page();
+  }
+  function renderTuto(myTurn) {
+    const bar = $("#tutoBar"); document.querySelectorAll(".tuto-glow").forEach((e) => e.classList.remove("tuto-glow"));
+    bar.classList.toggle("hidden", !tuto || !g); if (!tuto || !g) return;
+    const h = tutoHint(g, SEAT, { busy, myTurn, canPlay: (c) => g.canPlay(SEAT, c), canAttackAny: () => g.slots(SEAT).some((s) => g.canAttack(SEAT, s) && g.attackOptions(SEAT, s).length) });
+    $("#tutoText").innerHTML = h.text;
+    for (const sel of h.glow || []) document.querySelectorAll(sel).forEach((e) => e.classList.add("tuto-glow"));
   }
 
   // Défausse : toucher la pile pour voir les cartes (elles sont publiques)
