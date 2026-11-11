@@ -3,7 +3,7 @@
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "./config.js";
 
 export const configured = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
-const SDK = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/+esm";
+const SDK = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/+esm";
 let sb = null;
 const here = () => location.origin + location.pathname;
 const fail = (error) => { if (error) { const e = new Error(error.message || String(error)); e.code = error.code; throw e; } };
