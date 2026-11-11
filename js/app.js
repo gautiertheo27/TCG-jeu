@@ -138,7 +138,7 @@ function renderCollection() {
     if (own === "missing" && n) return false;
     if (own === "dupes" && n < 2) return false;
     if (fC.value && c.category !== fC.value) return false;
-    if (q && !(`${c.name} ${c.category} ${c.color} ${c.label}`.toLowerCase().includes(q))) return false;
+    if (q && !(`${n ? c.name : ""} ${c.category} ${c.color} ${c.label}`.toLowerCase().includes(q))) return false;
     return true;
   });
   const filtering = q || rar || own || fC.value;
@@ -173,15 +173,15 @@ function renderBook() {
   $("#bkSummary").innerHTML = `<table><thead><tr><th>Rareté</th><th>Cartes</th><th>Chance par carte et par booster</th><th>Soit</th></tr></thead><tbody>${rows}</tbody></table>
     <p class="muted small">Chaque carte d'une même rareté a la même chance. Les cartes <b>Promo</b> peuvent aussi tomber après une victoire en duel (${pct(PROMO_CHANCE_ON_WIN)} par victoire, 3 boosters de récompense par jour maximum).</p>`;
   const q = $("#bkSearch").value.trim().toLowerCase(), rar = fR2.value, sort = $("#bkSort").value;
-  let list = CARDS.filter((c) => (!rar || c.rarity === rar) && (!q || `${c.name} ${c.category} ${c.color} ${c.label}`.toLowerCase().includes(q)));
+  let list = CARDS.filter((c) => (!rar || c.rarity === rar) && (!q || `${S.owned(c.id) ? c.name : ""} ${c.category} ${c.color} ${c.label}`.toLowerCase().includes(q)));   // le nom d'une carte non obtenue reste secret, même par la recherche
   const ch = new Map(list.map((c) => [c.id, boosterChance(c)]));
-  list.sort(sort === "rare" ? (x, y) => ch.get(x.id).atLeastOne - ch.get(y.id).atLeastOne || x.n - y.n : sort === "name" ? (x, y) => x.name.localeCompare(y.name, "fr") : (x, y) => x.n - y.n);
+  list.sort(sort === "rare" ? (x, y) => ch.get(x.id).atLeastOne - ch.get(y.id).atLeastOne || x.n - y.n : sort === "name" ? (x, y) => (!!S.owned(y.id) - !!S.owned(x.id)) || (S.owned(x.id) ? x.name.localeCompare(y.name, "fr") : x.n - y.n) : (x, y) => x.n - y.n);
   $("#bkCount").textContent = `${list.length} carte${list.length > 1 ? "s" : ""}`;
   $("#bkList").innerHTML = list.map((c) => {
     const r = rarityOf(c), x = ch.get(c.id), n = S.owned(c.id);
     return `<div class="bk-row${n ? " have" : ""}" data-id="${c.id}">
       <div class="bk-img">${cardHTML(c, { hidden: !n })}</div>
-      <div class="bk-info"><b>${esc(c.name)}</b>
+      <div class="bk-info"><b>${n ? esc(c.name) : "???"}</b>
         <span class="muted small">${esc(c.label)} · ${esc(c.category)}${c.subtype ? " " + esc(c.subtype) : ""}${c.color ? " · " + esc(c.color) : ""}</span>
         <span class="bk-rar" style="--rc:${r.color}">${r.symbol} ${r.name}</span></div>
       <div class="bk-chance"><b>${pct(x.atLeastOne)}</b><span class="muted small">${oneIn(x.atLeastOne)}</span>${n ? `<span class="bk-own">✓ possédée ×${n}</span>` : ""}</div></div>`;
