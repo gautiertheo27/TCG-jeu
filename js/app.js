@@ -175,7 +175,7 @@ function renderBook() {
   $("#bkList").innerHTML = list.map((c) => {
     const r = rarityOf(c), x = ch.get(c.id), n = S.owned(c.id);
     return `<div class="bk-row${n ? " have" : ""}" data-id="${c.id}">
-      <div class="bk-img">${cardHTML(c)}</div>
+      <div class="bk-img">${cardHTML(c, { hidden: !n })}</div>
       <div class="bk-info"><b>${esc(c.name)}</b>
         <span class="muted small">${esc(c.label)} · ${esc(c.category)}${c.subtype ? " " + esc(c.subtype) : ""}${c.color ? " · " + esc(c.color) : ""}</span>
         <span class="bk-rar" style="--rc:${r.color}">${r.symbol} ${r.name}</span></div>
@@ -185,7 +185,8 @@ function renderBook() {
 $("#bkList").addEventListener("click", (e) => {
   const row = e.target.closest(".bk-row"); if (!row) return;
   const c = BY_ID[row.dataset.id], entry = S.get().collection[c.id];
-  openZoom(c, entry || { n: 0, holo: 0 });
+  if (!entry) { toast(`${c.label} — l'aperçu se débloque quand tu obtiens la carte`); return; }   // aperçu bloqué tant que la carte n'est pas obtenue
+  openZoom(c, entry);
 });
 
 // ---------- Zoom avec effet brillance ----------

@@ -42,7 +42,7 @@ export const PACK_SLOTS = [
   { label: "Commune",      count: 4, table: [["C", 1]] },
   { label: "Peu commune",  count: 3, table: [["PC", 1]] },
   { label: "Reverse holo", count: 1, foil: true, table: [["C", 0.55], ["PC", 0.30], ["R", 0.15]] },
-  { label: "Rare garantie", count: 1, table: [["P", 0.04], ["L", 0.04], ["E", 0.18], ["R", 0.74]] },   // 4 % de chance d'une carte Promo
+  { label: "Rare garantie", count: 1, table: [["P", 0.16], ["L", 0.3333], ["E", 0.2467], ["R", 0.26]] },   // par carte : Légendaire 1/30, Promo 1/50
 ];
 export const PACK_SIZE = PACK_SLOTS.reduce((s, x) => s + x.count, 0);
 export const PROMO_CHANCE_ON_WIN = 0.15;
