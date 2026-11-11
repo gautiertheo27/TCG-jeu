@@ -1,4 +1,4 @@
-import { CARDS, BY_ID, RARITIES, TYPES, SET } from "./cards.js";
+import { CARDS, BY_ID, RARITIES, TYPES, SET, PACK_SLOTS, PACK_SIZE } from "./cards.js";
 import * as S from "./state.js";
 
 const $ = (s) => document.querySelector(s);
@@ -20,10 +20,10 @@ export function cardHTML(card, { holo = false, hidden = false } = {}) {
   return `<div class="card${holo ? " holo" : ""}" data-r="${card.rarity}"
       style="--rc:${r.color};--a1:hsl(${h} 80% 55% / .75);--a2:hsl(${(h + 140) % 360} 80% 50% / .6)">
     <div class="c-top"><span class="c-name">${esc(card.name)}</span><span class="c-pow">${card.power}</span></div>
-    <div class="c-art"><span class="c-type" title="${t.name}">${t.icon}</span><span class="c-mono">${esc(mono(card.name))}</span><span class="c-game">${esc(card.game)}</span></div>
+    <div class="c-art">${card.img ? `<img src="${esc(card.img)}" alt="" loading="lazy">` : ""}<span class="c-type" title="${t.name}">${t.icon}</span><span class="c-mono">${esc(mono(card.name))}</span><span class="c-game">${esc(card.game)}</span></div>
     <div class="c-role">${esc(card.role)} · ${t.name}</div>
     <div class="c-flavor">« ${esc(card.flavor)} »</div>
-    <div class="c-foot"><span>${card.id}</span><span class="c-rar">${r.name}</span></div>
+    <div class="c-foot"><span>${SET.code} ${card.label}</span><span class="c-rar" title="${r.name}">${r.symbol} ${card.rarity}</span></div>
   </div>`;
 }
 
@@ -45,6 +45,9 @@ function toast(msg) {
 }
 
 // ---------- Boosters ----------
+$("#packSize").textContent = `${PACK_SIZE} cartes`;
+$("#odds").innerHTML = PACK_SLOTS.map((sl) => `<tr><td>${sl.count}× ${sl.label}${sl.foil ? " ✨" : ""}</td><td>${
+  sl.table.map(([r, p]) => `<span style="color:${RARITIES[r].color}">${RARITIES[r].symbol} ${RARITIES[r].name}</span> ${+(p * 100).toFixed(1)} %`).join("<br>")}</td></tr>`).join("");
 $("#maxStock").textContent = Number.isFinite(S.MAX_STOCK) ? S.MAX_STOCK : "∞";
 
 function fmt(ms) {
@@ -70,8 +73,7 @@ function openPacks(count) {
   const pulls = [];
   for (let i = 0; i < count; i++) { const p = S.openBooster(); if (!p) break; pulls.push(...p); }
   if (!pulls.length) { toast("Plus de booster : reviens dans quelques minutes !"); return; }
-  // Tri : plus rare en dernier pour garder le suspense
-  pulls.sort((a, b) => RARITIES[BY_ID[a.id].rarity].order - RARITIES[BY_ID[b.id].rarity].order);
+  // Ordre réel d'ouverture conservé : communes → peu communes → reverse → rare.
   const pack = $("#boosterPack");
   pack.classList.remove("opening"); void pack.offsetWidth; pack.classList.add("opening");
   setTimeout(() => showReveal(pulls), 450);

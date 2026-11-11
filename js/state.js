@@ -1,17 +1,16 @@
 // Sauvegarde + système de boosters (2 par heure, cumulables).
-import { CARDS, BY_RARITY } from "./cards.js";
+import { CARDS, BY_RARITY, RARITIES, PACK_SLOTS } from "./cards.js";
 
 export const BOOSTER_INTERVAL_MS = 30 * 60 * 1000; // 1 booster / 30 min = 2 / heure
 export const MAX_STOCK = 48;                        // 24 h d'absence. Mettre Infinity pour aucun plafond.
 export const START_STOCK = 2;
-export const HOLO_CHANCE = 0.08;
 export const DUEL_REWARDS_PER_DAY = 3;
 
-const KEY = "gmtcg.save.v1";
+const KEY = "gmtcg.save.v2"; // v2 : nouvelle numérotation (raretés modernes)
 
 function fresh() {
   return {
-    version: 1,
+    version: 2,
     stock: START_STOCK,
     lastCredit: Date.now(),
     collection: {},
@@ -68,17 +67,18 @@ function rollRarity(table) {
   return table[table.length - 1][0];
 }
 
-// Génère le contenu d'un booster (5 cartes) sans toucher à la sauvegarde.
+// Génère un booster dans l'ordre réel d'ouverture (voir PACK_SLOTS dans cards.js).
 export function rollBooster() {
-  const slots = [
-    [["C", 1]], [["C", 1]], [["C", 1]],
-    [["PC", 0.85], ["R", 0.15]],
-    [["R", 0.62], ["E", 0.25], ["L", 0.10], ["S", 0.03]],
-  ];
-  return slots.map((t) => {
-    const card = pick(BY_RARITY[rollRarity(t)]);
-    return { id: card.id, holo: Math.random() < HOLO_CHANCE };
-  });
+  const out = [];
+  for (const slot of PACK_SLOTS) {
+    for (let i = 0; i < slot.count; i++) {
+      const rar = rollRarity(slot.table);
+      const card = pick(BY_RARITY[rar]);
+      const holo = !!slot.foil || (!!slot.foilUnlessSecret && !RARITIES[rar].secret);
+      out.push({ id: card.id, holo, slot: slot.label });
+    }
+  }
+  return out;
 }
 
 // Consomme un booster et ajoute les cartes à la collection.
@@ -128,7 +128,7 @@ export function exportSave() {
 
 export function importSave(code) {
   const data = JSON.parse(decodeURIComponent(escape(atob(code.trim()))));
-  if (data.version !== 1 || typeof data.collection !== "object") throw new Error("Sauvegarde invalide");
+  if (data.version !== 2 || typeof data.collection !== "object") throw new Error("Sauvegarde invalide");
   state = { ...fresh(), ...data };
   save();
 }

@@ -30,7 +30,7 @@
           <span class="pack-shine"></span>
           <span class="pack-logo">GM</span>
           <span class="pack-title">MATES ORIGINS</span>
-          <span class="pack-sub">5 cartes</span>
+          <span class="pack-sub" id="packSize">10 cartes</span>
         </button>
         <div class="booster-info">
           <p class="big"><span id="stockBig">0</span> booster(s) disponible(s)</p>
@@ -42,6 +42,11 @@
           </div>
         </div>
       </div>
+      <details class="odds"><summary>Contenu d'un booster &amp; taux de drop</summary>
+        <table><thead><tr><th>Emplacement</th><th>Probabilités</th></tr></thead><tbody id="odds"></tbody></table>
+        <p class="muted small">Les cartes sont révélées dans l'ordre réel du paquet : la rare arrive toujours en dernier.
+        Les cartes secrètes (IR, UR, SIR, HR) sont numérotées au-delà du total du set.</p>
+      </details>
       <div id="reveal" class="reveal hidden">
         <div id="revealCards" class="reveal-cards"></div>
         <div class="btn-row center">
