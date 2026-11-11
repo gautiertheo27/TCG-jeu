@@ -37,12 +37,19 @@ export const MISSING = Array.from({ length: SET.total }, (_, i) => i + 1).filter
 // ---------- Booster : 10 cartes, révélées dans l'ordre réel du paquet ----------
 // Essence → communes → peu communes → reverse holo → rare garantie (toujours en dernier).
 // Les promos (P) sortent rarement dans le dernier emplacement (4 %) et se gagnent aussi en Duel.
+// Dernier emplacement : calculé pour que, PAR CARTE, chaque Promo sorte dans 1 booster sur 200, chaque Légendaire sur 100 et chaque Épique sur ≈ 60
+// (la Rare prend le reste, ≈ 1 sur 40). Les probabilités se recalculent seules quand on ajoute des cartes.
+function lastSlotTable() {
+  const n = (r) => BY_RARITY[r]?.length || 0, round = (x) => Math.round(x * 10000) / 10000;
+  const pP = round(n("P") / 200), pL = round(n("L") / 100), pE = round(Math.min(n("E") / 60, 1 - pP - pL - 0.2));
+  return [["P", pP], ["L", pL], ["E", pE], ["R", round(1 - pP - pL - pE)]].filter(([r]) => n(r) > 0);
+}
 export const PACK_SLOTS = [
   { label: "Essence",      count: 1, table: [["ES", 1]] },
   { label: "Commune",      count: 4, table: [["C", 1]] },
   { label: "Peu commune",  count: 3, table: [["PC", 1]] },
   { label: "Reverse holo", count: 1, foil: true, table: [["C", 0.55], ["PC", 0.30], ["R", 0.15]] },
-  { label: "Rare garantie", count: 1, table: [["P", 0.04], ["L", 0.10], ["E", 0.30], ["R", 0.56]] },   // par carte : Promo 1/200, Légendaire 1/100, Épique ≈ 1/60, Rare ≈ 1/39
+  { label: "Rare garantie", count: 1, table: lastSlotTable() },
 ];
 export const PACK_SIZE = PACK_SLOTS.reduce((s, x) => s + x.count, 0);
 export const PROMO_CHANCE_ON_WIN = 0.15;
