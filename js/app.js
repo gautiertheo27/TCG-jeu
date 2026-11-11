@@ -1,30 +1,22 @@
-import { CARDS, BY_ID, RARITIES, TYPES, SET, PACK_SLOTS, PACK_SIZE } from "./cards.js";
+import { CARDS, BY_ID, RARITIES, COLORS, SET, PACK_SLOTS, PACK_SIZE, MISSING } from "./cards.js";
 import * as S from "./state.js";
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
-// ---------- Rendu d'une carte ----------
-function hue(str) { let h = 0; for (const ch of str) h = (h * 31 + ch.charCodeAt(0)) % 360; return h; }
-function mono(name) {
-  const base = name.split("_")[0].length >= 3 ? name.split("_")[0] : name;
-  const clean = base.replace(/\d+$/g, "").replace(/[^A-Za-zÀ-ÿ ]/g, " ").trim();
-  const words = clean.split(/\s+/).filter(Boolean);
-  if (words.length >= 2) return (words[0][0] + words[words.length - 1][0]).toUpperCase();
-  return (clean.slice(0, 2) || name.slice(0, 2)).toUpperCase();
-}
-
+// ---------- Rendu d'une carte (image officielle) ----------
 export function cardHTML(card, { holo = false, hidden = false } = {}) {
-  if (hidden) card = { ...card, name: "???", game: "?", role: "Inconnue", flavor: "Pas encore obtenue." };
-  const r = RARITIES[card.rarity], t = TYPES[card.type], h = hue(card.name);
-  return `<div class="card${holo ? " holo" : ""}" data-r="${card.rarity}"
-      style="--rc:${r.color};--a1:hsl(${h} 80% 55% / .75);--a2:hsl(${(h + 140) % 360} 80% 50% / .6)">
-    <div class="c-top"><span class="c-name">${esc(card.name)}</span><span class="c-pow">${card.power}</span></div>
-    <div class="c-art">${card.img ? `<img src="${esc(card.img)}" alt="" loading="lazy">` : ""}<span class="c-type" title="${t.name}">${t.icon}</span><span class="c-mono">${esc(mono(card.name))}</span><span class="c-game">${esc(card.game)}</span></div>
-    <div class="c-role">${esc(card.role)} · ${t.name}</div>
-    <div class="c-flavor">« ${esc(card.flavor)} »</div>
-    <div class="c-foot"><span>${SET.code} ${card.label}</span><span class="c-rar" title="${r.name}">${r.symbol} ${card.rarity}</span></div>
-  </div>`;
+  const r = RARITIES[card.rarity];
+  if (hidden) {
+    return `<div class="card card-hidden" data-r="${card.rarity}" style="--rc:${r.color}">
+      <div class="ph"><span class="ph-num">${esc(card.label)}</span><span class="ph-rar">${r.symbol} ${r.name}</span></div></div>`;
+  }
+  return `<div class="card${holo ? " holo" : ""}" data-r="${card.rarity}" style="--rc:${r.color}">
+    <img src="${esc(card.img)}" alt="${esc(card.name)}" loading="lazy" draggable="false"></div>`;
+}
+function placeholderHTML(n) {
+  const label = `${String(n).padStart(3, "0")}/${SET.total}`;
+  return `<div class="cell missing soon"><div class="card card-hidden"><div class="ph"><span class="ph-num">${label}</span><span class="ph-rar">À venir</span></div></div></div>`;
 }
 
 // ---------- Navigation ----------
@@ -85,7 +77,7 @@ function showReveal(pulls) {
   box.innerHTML = pulls.map((p, i) => {
     const c = BY_ID[p.id];
     return `<div class="flip" data-r="${c.rarity}" style="animation-delay:${Math.min(i, 20) * 70}ms;--glow:${RARITIES[c.rarity].color}">
-      <div class="face back"><div class="card-back">GM</div></div>
+      <div class="face back"><div class="card-back"><span>GM</span></div></div>
       <div class="face front">${p.isNew ? '<span class="badge-new">NOUVEAU</span>' : ""}${p.holo ? '<span class="badge-holo">HOLO</span>' : ""}${cardHTML(c, { holo: p.holo })}</div>
     </div>`;
   }).join("");
@@ -109,7 +101,9 @@ $("#revealDone").addEventListener("click", () => {
 // ---------- Collection ----------
 const fR = $("#fRarity");
 for (const [k, r] of Object.entries(RARITIES)) fR.insertAdjacentHTML("beforeend", `<option value="${k}">${r.name}</option>`);
-["#fSearch", "#fRarity", "#fOwned"].forEach((s) => $(s).addEventListener("input", renderCollection));
+const fC = $("#fCat");
+for (const cat of [...new Set(CARDS.map((c) => c.category))]) fC.insertAdjacentHTML("beforeend", `<option>${esc(cat)}</option>`);
+["#fSearch", "#fRarity", "#fOwned", "#fCat"].forEach((s) => $(s).addEventListener("input", renderCollection));
 
 function renderCollection() {
   const { have, total } = S.completion();
@@ -122,18 +116,23 @@ function renderCollection() {
     if (own === "have" && !n) return false;
     if (own === "missing" && n) return false;
     if (own === "dupes" && n < 2) return false;
-    if (q && !(`${c.name} ${c.game} ${c.role} ${c.id}`.toLowerCase().includes(q))) return false;
+    if (fC.value && c.category !== fC.value) return false;
+    if (q && !(`${c.name} ${c.category} ${c.color} ${c.label}`.toLowerCase().includes(q))) return false;
     return true;
   });
-  $("#collGrid").innerHTML = list.map((c) => {
+  const filtering = q || rar || own || fC.value;
+  const items = list.map((c) => ({ n: c.n, html: (() => {
     const e = S.get().collection[c.id], n = e?.n || 0;
     return `<div class="cell${n ? "" : " missing"}" data-id="${c.id}">${cardHTML(c, { holo: (e?.holo || 0) > 0, hidden: !n })}${n ? `<span class="count">×${n}</span>` : ""}</div>`;
-  }).join("") || `<p class="muted">Aucune carte ne correspond.</p>`;
+  })() }));
+  if (!filtering) items.push(...MISSING.map((n) => ({ n, html: placeholderHTML(n) })));
+  items.sort((a, b) => a.n - b.n);
+  $("#collGrid").innerHTML = items.map((i) => i.html).join("") || `<p class="muted">Aucune carte ne correspond.</p>`;
 }
 $("#collGrid").addEventListener("click", (e) => {
-  const cell = e.target.closest(".cell"); if (!cell) return;
+  const cell = e.target.closest(".cell"); if (!cell || !cell.dataset.id) return;
   const c = BY_ID[cell.dataset.id], entry = S.get().collection[c.id];
-  if (!entry) { toast(`${c.id} — pas encore obtenue`); return; }
+  if (!entry) { toast(`${c.label} — pas encore obtenue`); return; }
   openZoom(c, entry);
 });
 
@@ -141,7 +140,8 @@ $("#collGrid").addEventListener("click", (e) => {
 function openZoom(c, entry) {
   const z = $("#zoom");
   z.innerHTML = `<div><div class="zcard">${cardHTML(c, { holo: entry.holo > 0 })}</div>
-    <div class="zinfo">${esc(c.name)} — ×${entry.n}${entry.holo ? ` (dont ${entry.holo} holo)` : ""}<br><small>Touche pour fermer</small></div></div>`;
+    <div class="zinfo"><b>${esc(c.name)}</b> · ${esc(c.category || "")}${c.def ? ` · Def ${c.def}` : ""} · ${RARITIES[c.rarity].name}<br>
+    ×${entry.n}${entry.holo ? ` (dont ${entry.holo} holo)` : ""}${c.illustrator ? ` · Illus : ${esc(c.illustrator)}` : ""}<br><small>Touche pour fermer</small></div></div>`;
   z.classList.remove("hidden");
 }
 $("#zoom").addEventListener("click", () => $("#zoom").classList.add("hidden"));
@@ -157,14 +157,15 @@ document.addEventListener("keydown", (e) => { if (e.key === "Escape") $("#zoom")
 
 // ---------- Duel ----------
 let picked = [];
-function ownedCards() { return CARDS.filter((c) => S.owned(c.id) > 0); }
+const isPlayer = (c) => c.category === "Joueur" && c.def;
+function ownedCards() { return CARDS.filter((c) => isPlayer(c) && S.owned(c.id) > 0); }
 
 function renderDuelSetup() {
   $("#duelSetup").classList.remove("hidden"); $("#duelBoard").classList.add("hidden");
   const mine = ownedCards();
   picked = picked.filter((id) => S.owned(id) > 0);
   if (mine.length < 5) {
-    $("#duelPick").innerHTML = `<p class="muted">Il te faut au moins 5 cartes différentes (tu en as ${mine.length}). Ouvre des boosters !</p>`;
+    $("#duelPick").innerHTML = `<p class="muted">Il te faut au moins 5 cartes Joueur différentes (tu en as ${mine.length}). Ouvre des boosters !</p>`;
   } else {
     $("#duelPick").innerHTML = mine.sort((a, b) => b.power - a.power).map((c) =>
       `<div class="cell${picked.includes(c.id) ? " selected" : ""}" data-id="${c.id}">${cardHTML(c)}</div>`).join("");
@@ -192,7 +193,7 @@ function startDuel() {
   const hand = picked.map((id) => BY_ID[id]);
   const avg = hand.reduce((s, c) => s + c.power, 0) / 5;
   // L'IA prend 5 cartes de puissance proche de la moyenne du joueur
-  const pool = [...CARDS].sort(() => Math.random() - 0.5).sort((a, b) => Math.abs(a.power - avg) - Math.abs(b.power - avg));
+  const pool = CARDS.filter(isPlayer).sort(() => Math.random() - 0.5).sort((a, b) => Math.abs(a.power - avg) - Math.abs(b.power - avg));
   const ai = pool.slice(0, 9).sort(() => Math.random() - 0.5).slice(0, 5);
   duel = { hand, ai, me: 0, opp: 0, round: 0, lock: false };
   $("#duelSetup").classList.add("hidden"); $("#duelBoard").classList.remove("hidden"); $("#duelAgain").classList.add("hidden");
@@ -206,7 +207,8 @@ function updateScore() {
   $("#sMe").textContent = duel.me; $("#sAi").textContent = duel.opp;
   $("#roundLbl").textContent = `Manche ${Math.min(duel.round + 1, 5)}/5`;
 }
-function strength(a, b) { return a.power + (TYPES[a.type].beats === b.type ? 3 : 0); }
+// Chaque Joueur frappe avec sa meilleure attaque : on compare la part de Def adverse retirée.
+function strength(a, b) { return Math.round((a.power / b.def) * 100); }
 
 $("#hand").addEventListener("click", (e) => {
   const cell = e.target.closest(".cell"); if (!cell || duel.lock) return;
@@ -220,8 +222,8 @@ $("#hand").addEventListener("click", (e) => {
     const a = strength(mine, theirs), b = strength(theirs, mine);
     let msg = a > b ? "Manche gagnée !" : a < b ? "Manche perdue" : "Égalité";
     if (a > b) duel.me++; else if (b > a) duel.opp++;
-    const bonus = a > mine.power ? "Ton type a l'avantage +3" : b > theirs.power ? "Type adverse avantagé +3" : "";
-    $("#duelMsg").innerHTML = `${a} vs ${b}<br>${msg}${bonus ? `<span class="bonus">${bonus}</span>` : ""}`;
+    const ko = [mine.power >= theirs.def ? "K.O. adverse !" : "", theirs.power >= mine.def ? "Ton Joueur est K.O." : ""].filter(Boolean).join(" · ");
+    $("#duelMsg").innerHTML = `${mine.power} → Def ${theirs.def} (${a} %)<br>${theirs.power} → Def ${mine.def} (${b} %)<br>${msg}${ko ? `<span class="bonus">${ko}</span>` : ""}`;
     duel.round++; updateScore(); duel.lock = false;
     if (duel.round === 5) endDuel();
   }, 600);
@@ -229,9 +231,9 @@ $("#hand").addEventListener("click", (e) => {
 function endDuel() {
   duel.lock = true;
   const won = duel.me > duel.opp;
-  const rewarded = S.recordDuel(won);
+  const { rewarded, promo } = S.recordDuel(won);
   setTimeout(() => {
-    $("#duelMsg").innerHTML = won ? `🏆 Victoire ${duel.me}-${duel.opp} !${rewarded ? '<span class="bonus">+1 booster</span>' : '<span class="bonus">Récompenses du jour épuisées</span>'}`
+    $("#duelMsg").innerHTML = won ? `🏆 Victoire ${duel.me}-${duel.opp} !${rewarded ? '<span class="bonus">+1 booster</span>' : '<span class="bonus">Récompenses du jour épuisées</span>'}${promo ? `<span class="bonus">🎉 Carte promo : ${esc(promo.name)} (${promo.label})</span>` : ""}`
       : duel.me === duel.opp ? `Match nul ${duel.me}-${duel.opp}` : `Défaite ${duel.me}-${duel.opp}`;
     $("#duelAgain").classList.remove("hidden"); tick();
   }, 900);
@@ -255,6 +257,14 @@ $("#btnImport").addEventListener("click", () => {
 });
 $("#btnReset").addEventListener("click", () => {
   if (confirm("Effacer toute ta progression ?")) { S.reset(); picked = []; tick(); renderProfile(); toast("Progression réinitialisée"); }
+});
+
+// ---------- Appli installable (PWA) ----------
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+let installEvt = null;
+window.addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); installEvt = e; $("#installBtn").classList.remove("hidden"); });
+$("#installBtn").addEventListener("click", async () => {
+  if (!installEvt) return; installEvt.prompt(); await installEvt.userChoice; installEvt = null; $("#installBtn").classList.add("hidden");
 });
 
 // ---------- Démarrage ----------

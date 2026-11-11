@@ -2,23 +2,30 @@
 <html lang="fr">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0d0b12">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="GM TCG">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
   <title>Gentle Mates TCG</title>
   <meta name="description" content="Jeu de cartes à collectionner fan-made Gentle Mates : ouvre 2 boosters par heure, complète ta collection et affronte l'IA.">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🃏</text></svg>">
+  <link rel="icon" href="icons/icon-192.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
   <header class="top">
-    <div class="brand"><span class="logo">GM</span><div><strong>Gentle Mates TCG</strong><small>Mates Origins</small></div></div>
+    <div class="brand"><span class="logo">GM</span><div><strong>Gentle Mates TCG</strong><small>Extension 1 · 122 cartes</small></div></div>
     <nav class="tabs" role="tablist">
       <button data-tab="boosters" class="active">Boosters</button>
       <button data-tab="collection">Collection</button>
       <button data-tab="duel">Duel</button>
       <button data-tab="profil">Profil</button>
     </nav>
+    <button id="installBtn" class="btn install hidden">📲 Installer</button>
     <div class="stock-pill" title="Boosters disponibles"><span id="stockCount">0</span> 🎁</div>
   </header>
 
@@ -29,7 +36,7 @@
         <button id="boosterPack" class="pack" aria-label="Ouvrir un booster">
           <span class="pack-shine"></span>
           <span class="pack-logo">GM</span>
-          <span class="pack-title">MATES ORIGINS</span>
+          <span class="pack-title">GENTLE MATES TCG</span>
           <span class="pack-sub" id="packSize">10 cartes</span>
         </button>
         <div class="booster-info">
@@ -45,7 +52,7 @@
       <details class="odds"><summary>Contenu d'un booster &amp; taux de drop</summary>
         <table><thead><tr><th>Emplacement</th><th>Probabilités</th></tr></thead><tbody id="odds"></tbody></table>
         <p class="muted small">Les cartes sont révélées dans l'ordre réel du paquet : la rare arrive toujours en dernier.
-        Les cartes secrètes (IR, UR, SIR, HR) sont numérotées au-delà du total du set.</p>
+        Les cartes Promo (P) ne sortent pas en booster : chaque victoire en Duel a 15 % de chance d'en donner une.</p>
       </details>
       <div id="reveal" class="reveal hidden">
         <div id="revealCards" class="reveal-cards"></div>
@@ -66,6 +73,7 @@
         <div class="filters">
           <input id="fSearch" type="search" placeholder="Rechercher une carte…">
           <select id="fRarity"><option value="">Toutes raretés</option></select>
+          <select id="fCat"><option value="">Toutes catégories</option></select>
           <select id="fOwned">
             <option value="">Toutes</option><option value="have">Possédées</option>
             <option value="missing">Manquantes</option><option value="dupes">Doublons</option>
@@ -79,8 +87,8 @@
     <section id="tab-duel" class="tab">
       <div id="duelSetup">
         <h2>Duel contre l'IA</h2>
-        <p class="muted">Choisis <strong>5 cartes</strong>. Chaque manche, la plus forte gagne. Bonus +3 si ton type bat celui de l'adversaire
-          (⚔️ Attaque &gt; 🧠 Tactique &gt; 🛡️ Défense &gt; ⚔️ Attaque). Victoire = +1 booster (3 par jour max).</p>
+        <p class="muted">Choisis <strong>5 cartes Joueur</strong>. Chaque manche, les deux Joueurs se frappent avec leur meilleure attaque :
+          celui qui retire la plus grande part de la Def adverse gagne la manche. Victoire = +1 booster (3 par jour max) et 15 % de chance d'obtenir une carte Promo.</p>
         <div class="btn-row"><button id="duelAuto" class="btn">Sélection auto</button><button id="duelStart" class="btn primary" disabled>Lancer le duel (0/5)</button></div>
         <div id="duelPick" class="grid small-grid"></div>
       </div>
@@ -110,7 +118,7 @@
   <div id="zoom" class="zoom hidden" role="dialog" aria-modal="true"></div>
   <div id="toast" class="toast"></div>
 
-  <footer>Projet fan non officiel, non affilié à Gentle Mates. Visuels originaux.</footer>
+  <footer>Projet fan non officiel, non affilié à Gentle Mates. Visuels © Gentle Mates.</footer>
   <script type="module" src="js/app.js"></script>
 </body>
 </html>

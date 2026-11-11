@@ -1,16 +1,16 @@
 // Sauvegarde + système de boosters (2 par heure, cumulables).
-import { CARDS, BY_RARITY, RARITIES, PACK_SLOTS } from "./cards.js";
+import { CARDS, BY_RARITY, PACK_SLOTS, PROMO_CHANCE_ON_WIN, SET } from "./cards.js";
 
 export const BOOSTER_INTERVAL_MS = 30 * 60 * 1000; // 1 booster / 30 min = 2 / heure
 export const MAX_STOCK = 48;                        // 24 h d'absence. Mettre Infinity pour aucun plafond.
 export const START_STOCK = 2;
 export const DUEL_REWARDS_PER_DAY = 3;
 
-const KEY = "gmtcg.save.v2"; // v2 : nouvelle numérotation (raretés modernes)
+const KEY = "gmtcg.save.v3"; // v3 : vraies cartes du TCG Gentle Mates
 
 function fresh() {
   return {
-    version: 2,
+    version: 3,
     stock: START_STOCK,
     lastCredit: Date.now(),
     collection: {},
@@ -74,7 +74,7 @@ export function rollBooster() {
     for (let i = 0; i < slot.count; i++) {
       const rar = rollRarity(slot.table);
       const card = pick(BY_RARITY[rar]);
-      const holo = !!slot.foil || (!!slot.foilUnlessSecret && !RARITIES[rar].secret);
+      const holo = !!slot.foil;
       out.push({ id: card.id, holo, slot: slot.label });
     }
   }
@@ -86,14 +86,7 @@ export function openBooster() {
   creditBoosters();
   if (state.stock <= 0) return null;
   state.stock -= 1;
-  const pulls = rollBooster().map((p) => {
-    const entry = state.collection[p.id] || { n: 0, holo: 0 };
-    const isNew = entry.n === 0;
-    entry.n += 1;
-    if (p.holo) entry.holo += 1;
-    state.collection[p.id] = entry;
-    return { ...p, isNew };
-  });
+  const pulls = rollBooster().map((p) => ({ ...p, isNew: addCard(p.id, p.holo) }));
   state.stats.opened += 1;
   save();
   return pulls;
@@ -102,13 +95,21 @@ export function openBooster() {
 export function owned(id) { return state.collection[id]?.n || 0; }
 
 export function completion() {
-  const have = CARDS.filter((c) => owned(c.id) > 0).length;
-  return { have, total: CARDS.length };
+  const have = CARDS.filter((c) => c.n <= SET.total && owned(c.id) > 0).length;
+  return { have, total: SET.total };
+}
+
+function addCard(id, holo = false) {
+  const entry = state.collection[id] || { n: 0, holo: 0 };
+  const isNew = entry.n === 0;
+  entry.n += 1; if (holo) entry.holo += 1;
+  state.collection[id] = entry;
+  return isNew;
 }
 
 export function recordDuel(won) {
   state.stats.duelsPlayed += 1;
-  let rewarded = false;
+  let rewarded = false, promo = null;
   if (won) {
     state.stats.duelsWon += 1;
     if (state.duelRewards.day !== today()) state.duelRewards = { day: today(), count: 0 };
@@ -117,9 +118,13 @@ export function recordDuel(won) {
       state.stock += 1;
       rewarded = true;
     }
+    if (Math.random() < PROMO_CHANCE_ON_WIN) {
+      promo = pick(BY_RARITY.P);
+      addCard(promo.id);
+    }
   }
   save();
-  return rewarded;
+  return { rewarded, promo };
 }
 
 export function exportSave() {
@@ -128,7 +133,7 @@ export function exportSave() {
 
 export function importSave(code) {
   const data = JSON.parse(decodeURIComponent(escape(atob(code.trim()))));
-  if (data.version !== 2 || typeof data.collection !== "object") throw new Error("Sauvegarde invalide");
+  if (data.version !== 3 || typeof data.collection !== "object") throw new Error("Sauvegarde invalide");
   state = { ...fresh(), ...data };
   save();
 }

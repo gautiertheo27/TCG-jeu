@@ -199,3 +199,47 @@ textarea { width: 100%; font-family: ui-monospace, monospace; font-size: .8rem; 
 .odds summary { cursor: pointer; font-weight: 700; }
 .odds table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: .9rem; }
 .odds td, .odds th { text-align: left; padding: 8px 6px; border-top: 1px solid var(--line); vertical-align: top; }
+
+/* ---------- Vraies cartes (images) ---------- */
+.card:has(> img) { padding: 0; border: 0; background: #000; border-radius: 4.2% / 3%; aspect-ratio: 640 / 894; }
+.card > img { width: 100%; height: 100%; object-fit: cover; display: block; user-select: none; }
+.card.holo::after { z-index: 2; }
+.card[data-r="L"]:has(> img), .card[data-r="P"]:has(> img) { box-shadow: 0 0 22px color-mix(in srgb, var(--rc) 55%, transparent); }
+.card[data-r="E"]:has(> img) { box-shadow: 0 0 14px #a55bff66; }
+.card[data-r="L"]:has(> img)::after, .card[data-r="P"]:has(> img)::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none; mix-blend-mode: color-dodge; opacity: .35; z-index: 2;
+  background: linear-gradient(var(--ang, 115deg), transparent 25%, #ffe14f 40%, #ff4fa3 50%, #4fd1ff 60%, transparent 75%);
+  background-size: 250% 250%; background-position: var(--px, 50%) var(--py, 50%);
+}
+.card-hidden { padding: 0; border: 2px dashed color-mix(in srgb, var(--rc, #555) 60%, transparent); background: #15111c; aspect-ratio: 640 / 894; }
+.card-hidden .ph { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; color: var(--muted); }
+.card-hidden .ph-num { font-family: "Bebas Neue", sans-serif; font-size: 20cqw; color: #8d82a0; }
+.card-hidden .ph-rar { font-size: 7cqw; color: var(--rc, var(--muted)); }
+.cell.missing .card-hidden { filter: none; }
+.cell.soon { cursor: default; opacity: .6; }
+.cell.soon:hover { transform: none; }
+.card-back { background: radial-gradient(circle at 50% 40%, #ff4fa355, transparent 60%), repeating-linear-gradient(45deg, #2a1230 0 10px, #23102a 10px 20px); }
+.flip, .slot { aspect-ratio: 640 / 894; }
+.duel-msg { max-width: 220px; font-size: .9rem; line-height: 1.4; }
+
+/* ---------- Adaptation PC / tablette / téléphone ---------- */
+body { padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); -webkit-tap-highlight-color: transparent; }
+.top { padding-top: max(10px, env(safe-area-inset-top)); }
+.btn.install { padding: 6px 12px; font-size: .85rem; }
+.tabs button, .btn { min-height: 40px; }
+.grid { grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); }
+@media (min-width: 1400px) { main { max-width: 1320px; } .grid { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); } }
+@media (max-width: 900px) { .booster-zone { gap: 24px; padding: 16px 0; } .flip { width: 22vw; min-width: 120px; } }
+@media (max-width: 640px) {
+  main { padding: 16px 12px 40px; }
+  h2 { font-size: 1.6rem; }
+  .pack { width: 160px; height: 240px; } .pack-logo { font-size: 4rem; }
+  .booster-info { text-align: center; } .booster-info .btn-row { justify-content: center; }
+  .reveal-cards { gap: 8px; } .flip { width: calc((100vw - 24px - 16px) / 3); min-width: 0; }
+  .coll-head { align-items: stretch; } .filters select, .filters input { flex: 1 1 45%; min-width: 0; }
+  .arena { grid-template-columns: 1fr 1fr; } .arena .duel-msg { grid-column: 1 / -1; grid-row: 2; max-width: none; }
+  .slot { width: 40vw; }
+  .hand .cell { width: calc((100vw - 24px - 40px) / 5); }
+  .zoom .zcard { width: min(88vw, 60vh * 0.716); }
+}
+@media (max-width: 380px) { .grid { gap: 8px; } }
