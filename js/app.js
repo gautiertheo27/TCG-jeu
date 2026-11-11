@@ -3,7 +3,7 @@ import * as S from "./state.js";
 import { cardHTML, placeholderHTML, esc } from "./cardview.js";
 import { initDuel } from "./duel-ui.js";
 import { playOpening, isOpening } from "./opening.js";
-import { configured, initAccount, auth, api, providerLabel } from "./account.js";
+import { configured, initAccount, auth, api, providerLabel, enabledProviders } from "./account.js";
 
 const $ = (s) => document.querySelector(s);
 
@@ -192,11 +192,13 @@ $("#authModal").addEventListener("click", (e) => { if (e.target.id === "authModa
 const errText = (e) => ({ "Invalid login credentials": "E-mail ou mot de passe incorrect.", "User already registered": "Un compte existe déjà avec cet e-mail.",
   "Email not confirmed": "Confirme d'abord ton e-mail (regarde ta boîte de réception).", "Password should be at least 6 characters": "Mot de passe trop court (6 caractères minimum)." }[e.message] || e.message);
 
-function showAuth(tab = "signin") {
+const PROV_LABEL = { google: "Continuer avec Google", discord: "Continuer avec Discord" };
+async function showAuth(tab = "signin") {
+  const provs = window.__gmFakeSupabase ? ["google", "discord"] : await enabledProviders();
   const up = tab === "signup", reset = tab === "reset";
   modal(`<h3>${up ? "Créer un compte" : reset ? "Mot de passe oublié" : "Se connecter"}</h3>
     <p class="muted small">Ta collection et tes boosters seront sauvegardés et disponibles sur tous tes appareils.</p>
-    ${reset ? "" : `<div class="btn-col"><button class="btn" data-oauth="google">Continuer avec Google</button><button class="btn" data-oauth="discord">Continuer avec Discord</button></div><p class="muted small center">ou avec ton e-mail</p>`}
+    ${reset || !provs.length ? "" : `<div class="btn-col">${provs.map((p) => `<button class="btn" data-oauth="${p}">${PROV_LABEL[p]}</button>`).join("")}</div><p class="muted small center">ou avec ton e-mail</p>`}
     <form id="authForm" class="auth-form">
       ${up ? '<input name="username" placeholder="Pseudo" maxlength="24" required autocomplete="nickname">' : ""}
       <input name="email" type="email" placeholder="E-mail" required autocomplete="email">

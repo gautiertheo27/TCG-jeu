@@ -46,3 +46,14 @@ export const api = {
 export function providerLabel(user) {
   const p = user?.app_metadata?.provider; return p === "google" ? "Google" : p === "discord" ? "Discord" : "e-mail";
 }
+
+// Fournisseurs de connexion réellement activés dans le projet (Google, Discord) : évite d'afficher un bouton qui ne marche pas.
+let provCache = null;
+export async function enabledProviders() {
+  if (provCache) return provCache;
+  try {
+    const r = await fetch(`${SUPABASE_URL}/auth/v1/settings`, { headers: { apikey: SUPABASE_ANON_KEY } });
+    const d = await r.json(); provCache = ["google", "discord"].filter((p) => d.external?.[p]);
+  } catch (_) { provCache = []; }
+  return provCache;
+}
