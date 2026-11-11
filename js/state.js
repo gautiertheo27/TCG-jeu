@@ -1,8 +1,9 @@
-// Sauvegarde + système de boosters (2 par heure, cumulables).
-import { CARDS, BY_RARITY, PACK_SLOTS, PROMO_CHANCE_ON_WIN, SET } from "./cards.js";
+// Sauvegarde + système de boosters (1 toutes les 10 minutes, 10 max en stock).
+// Deux modes : « local » (invité, navigateur) et « remote » (compte connecté : stock et collection gérés par le serveur).
+import { CARDS, BY_ID, BY_RARITY, PACK_SLOTS, PROMO_CHANCE_ON_WIN, SET } from "./cards.js";
 
-export const BOOSTER_INTERVAL_MS = 30 * 60 * 1000; // 1 booster / 30 min = 2 / heure
-export const MAX_STOCK = 48;                        // 24 h d'absence. Mettre Infinity pour aucun plafond.
+export let BOOSTER_INTERVAL_MS = 10 * 60 * 1000;   // 1 booster toutes les 10 minutes
+export let MAX_STOCK = 10;                          // cumulable jusqu'à 10 boosters en stock (au-delà, le décompte s'arrête)
 export const START_STOCK = 2;
 export const DUEL_REWARDS_PER_DAY = 3;
 
@@ -24,8 +25,27 @@ export function today() {
   return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
 }
 
-let state = load();
+let localState = load();
+let state = localState;
+let mode = "local", remoteApi = null, clockOffset = 0, profile = null;
 save();
+const nowMs = () => Date.now() + clockOffset;     // en mode compte : heure du serveur
+
+export const isRemote = () => mode === "remote";
+export const getProfile = () => profile;
+
+function fromServer(r) {
+  clockOffset = Date.parse(r.now) - Date.now();
+  if (r.interval_s) BOOSTER_INTERVAL_MS = r.interval_s * 1000;
+  if (r.max_stock) MAX_STOCK = r.max_stock;
+  profile = r.profile || null;
+  state = { version: 3, stock: r.stock, lastCredit: Date.parse(r.last_credit), collection: r.collection || {},
+    stats: r.stats, duelRewards: { day: r.duelRewards?.day, count: r.duelRewards?.count || 0 }, imported: !!r.imported };
+}
+export function enterRemote(api, serverState) { mode = "remote"; remoteApi = api; fromServer(serverState); }
+export function applyServerState(serverState) { fromServer(serverState); }
+export function leaveRemote() { mode = "local"; remoteApi = null; profile = null; clockOffset = 0; state = localState; BOOSTER_INTERVAL_MS = 10 * 60 * 1000; MAX_STOCK = 10; }
+export function localSnapshot() { return localState; }
 
 function load() {
   try {
@@ -36,13 +56,14 @@ function load() {
 }
 
 export function save() {
-  try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (_) {}
+  if (mode !== "local") return;                 // le compte est sauvegardé par le serveur
+  try { localStorage.setItem(KEY, JSON.stringify(localState)); } catch (_) {}
 }
 
 export function get() { return state; }
 
 // Crédite les boosters gagnés depuis le dernier passage. Renvoie le nombre gagné.
-export function creditBoosters(now = Date.now()) {
+export function creditBoosters(now = nowMs()) {
   if (now < state.lastCredit) { state.lastCredit = now; save(); return 0; } // horloge reculée
   if (state.stock >= MAX_STOCK) { state.lastCredit = now; save(); return 0; }
   const earned = Math.floor((now - state.lastCredit) / BOOSTER_INTERVAL_MS);
@@ -54,7 +75,7 @@ export function creditBoosters(now = Date.now()) {
   return added;
 }
 
-export function msUntilNext(now = Date.now()) {
+export function msUntilNext(now = nowMs()) {
   if (state.stock >= MAX_STOCK) return null;
   return Math.max(0, state.lastCredit + BOOSTER_INTERVAL_MS - now);
 }
@@ -81,10 +102,19 @@ export function rollBooster() {
   return out;
 }
 
-// Consomme un booster et ajoute les cartes à la collection.
-export function openBooster() {
+// Consomme un booster et ajoute les cartes à la collection. Renvoie les 10 cartes, ou null s'il n'y en a plus.
+export async function openBooster() {
   creditBoosters();
   if (state.stock <= 0) return null;
+  if (mode === "remote") {
+    try {
+      const r = await remoteApi.openBooster();
+      fromServer(r.state); return r.pulls;
+    } catch (e) {
+      if (/NO_BOOSTER/.test(e.message)) { fromServer(await remoteApi.getState()); return null; }
+      throw e;
+    }
+  }
   state.stock -= 1;
   const pulls = rollBooster().map((p) => ({ ...p, isNew: addCard(p.id, p.holo) }));
   state.stats.opened += 1;
@@ -107,7 +137,13 @@ function addCard(id, holo = false) {
   return isNew;
 }
 
-export function recordDuel(won) {
+export async function recordDuel(won) {
+  if (mode === "remote") {
+    try {
+      const r = await remoteApi.recordDuel(won); fromServer(r.state);
+      return { rewarded: !!r.rewarded, promo: r.promo ? BY_ID[r.promo] : null };
+    } catch (e) { console.error(e); return { rewarded: false, promo: null }; }
+  }
   state.stats.duelsPlayed += 1;
   let rewarded = false, promo = null;
   if (won) {
@@ -128,17 +164,18 @@ export function recordDuel(won) {
 }
 
 export function exportSave() {
+  if (mode === "remote") return btoa(unescape(encodeURIComponent(JSON.stringify(localState))));
   return btoa(unescape(encodeURIComponent(JSON.stringify(state))));
 }
 
 export function importSave(code) {
   const data = JSON.parse(decodeURIComponent(escape(atob(code.trim()))));
   if (data.version !== 3 || typeof data.collection !== "object") throw new Error("Sauvegarde invalide");
-  state = { ...fresh(), ...data };
+  localState = { ...fresh(), ...data }; if (mode === "local") state = localState;
   save();
 }
 
 export function reset() {
-  state = fresh();
+  localState = fresh(); if (mode === "local") state = localState;
   save();
 }

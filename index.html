@@ -26,7 +26,8 @@
       <button data-tab="profil">Profil</button>
     </nav>
     <button id="installBtn" class="btn install hidden">📲 Installer</button>
-    <div class="stock-pill" title="Boosters disponibles"><span id="stockCount">0</span> 🎁</div>
+    <button id="accountBtn" class="btn account hidden" type="button">👤 Se connecter</button>
+    <div class="stock-pill" title="Boosters disponibles"><span id="stockCount">0</span> 🎁 <small id="pillTimer"></small></div>
   </header>
 
   <main>
@@ -44,9 +45,13 @@
         <div id="packPicker" class="pack-picker hidden" aria-label="Choisir le design du booster"></div>
         </div>
         <div class="booster-info">
-          <p class="big"><span id="stockBig">0</span> booster(s) disponible(s)</p>
-          <p id="nextTimer" class="muted">Prochain booster dans --:--</p>
-          <p class="muted small">Glisse sur le haut du paquet (ou touche-le) pour l'ouvrir. 2 boosters par heure, cumulables (max <span id="maxStock"></span>).</p>
+          <p class="big"><span id="stockBig">0</span> / <span id="maxStock">10</span> booster(s)</p>
+          <div class="countdown" id="countdown">
+            <span class="cd-label" id="cdLabel">Prochain booster dans</span>
+            <span class="cd-time" id="nextTimer">--:--</span>
+            <div class="cd-bar"><i id="cdBar"></i></div>
+          </div>
+          <p class="muted small" id="rule">Glisse sur le haut du paquet (ou touche-le) pour l'ouvrir.</p>
           <div class="btn-row">
             <button id="openOne" class="btn primary">Ouvrir un booster</button>
             <button id="openAll" class="btn">Tout ouvrir</button>
@@ -119,6 +124,8 @@
     <section id="tab-profil" class="tab">
       <h2>Profil</h2>
       <div id="stats" class="stats"></div>
+      <div id="accountBox" class="account-box"></div>
+      <div id="saveBox">
       <h3>Sauvegarde</h3>
       <p class="muted small">Ta progression est enregistrée dans ce navigateur. Copie ce code pour la transférer sur un autre appareil.</p>
       <textarea id="saveCode" rows="3" spellcheck="false"></textarea>
@@ -127,9 +134,11 @@
         <button id="btnImport" class="btn">Importer</button>
         <button id="btnReset" class="btn danger">Réinitialiser</button>
       </div>
+      </div>
     </section>
   </main>
 
+  <div id="authModal" class="modal hidden" role="dialog" aria-modal="true"></div>
   <div id="opening" class="opening hidden" role="dialog" aria-modal="true" aria-label="Ouverture de booster"></div>
   <div id="zoom" class="zoom hidden" role="dialog" aria-modal="true"></div>
   <div id="toast" class="toast"></div>

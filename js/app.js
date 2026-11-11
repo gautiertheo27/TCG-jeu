@@ -3,6 +3,7 @@ import * as S from "./state.js";
 import { cardHTML, placeholderHTML, esc } from "./cardview.js";
 import { initDuel } from "./duel-ui.js";
 import { playOpening, isOpening } from "./opening.js";
+import { configured, initAccount, auth, api, providerLabel } from "./account.js";
 
 const $ = (s) => document.querySelector(s);
 
@@ -27,7 +28,6 @@ function toast(msg) {
 $("#packSize").textContent = `${PACK_SIZE} cartes`;
 $("#odds").innerHTML = PACK_SLOTS.map((sl) => `<tr><td>${sl.count}× ${sl.label}${sl.foil ? " ✨" : ""}</td><td>${
   sl.table.map(([r, p]) => `<span style="color:${RARITIES[r].color}">${RARITIES[r].symbol} ${RARITIES[r].name}</span> ${+(p * 100).toFixed(1)} %`).join("<br>")}</td></tr>`).join("");
-$("#maxStock").textContent = Number.isFinite(S.MAX_STOCK) ? S.MAX_STOCK : "∞";
 
 // Designs des boosters (images fournies dans src/boosters/). Sans images, le booster CSS reste affiché.
 const BOOSTER_ART = ["boosters/1.webp", "boosters/2.webp", "boosters/3.webp", "boosters/4.webp"];
@@ -55,13 +55,22 @@ function fmt(ms) {
   return `${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
 }
 
+const BASE_TITLE = document.title;
 function tick() {
   const gained = S.creditBoosters();
   if (gained > 0) toast(`🎁 +${gained} booster${gained > 1 ? "s" : ""} !`);
-  const st = S.get().stock;
-  $("#stockCount").textContent = st; $("#stockBig").textContent = st;
-  const next = S.msUntilNext();
-  $("#nextTimer").textContent = next === null ? "Stock plein — ouvre tes boosters !" : `Prochain booster dans ${fmt(next)}`;
+  const st = S.get().stock, max = S.MAX_STOCK, next = S.msUntilNext();
+  $("#stockCount").textContent = st; $("#stockBig").textContent = st; $("#maxStock").textContent = Number.isFinite(max) ? max : "∞";
+  if (next === null) {
+    $("#cdLabel").textContent = "Stock plein — ouvre tes boosters pour relancer le décompte"; $("#nextTimer").textContent = `${st} / ${max}`;
+    $("#cdBar").style.width = "100%"; $("#pillTimer").textContent = ""; document.title = BASE_TITLE;
+  } else {
+    $("#cdLabel").textContent = "Prochain booster dans"; $("#nextTimer").textContent = fmt(next);
+    $("#cdBar").style.width = `${Math.max(0, Math.min(100, (1 - next / S.BOOSTER_INTERVAL_MS) * 100))}%`;
+    $("#pillTimer").textContent = fmt(next); document.title = st === 0 ? `(${fmt(next)}) ${BASE_TITLE}` : BASE_TITLE;
+  }
+  const mins = S.BOOSTER_INTERVAL_MS / 60000;
+  $("#rule").textContent = `Glisse sur le haut du paquet (ou touche-le) pour l'ouvrir. 1 booster toutes les ${mins} minutes, ${Number.isFinite(max) ? max : "illimités"} en stock au maximum.`;
   const busy = isOpening();
   $("#openOne").disabled = st <= 0 || busy;
   $("#openAll").disabled = st <= 1 || busy;
@@ -72,7 +81,7 @@ async function openPacks(count) {
   if (isOpening()) return;
   const quick = count > 1;                       // « Tout ouvrir » : récap direct, sans animation
   const pulls = [];
-  for (let i = 0; i < count; i++) { const p = S.openBooster(); if (!p) break; pulls.push(...p); }
+  for (let i = 0; i < Math.min(count, 12); i++) { const p = await S.openBooster().catch((e) => { toast("Erreur serveur : " + e.message); return null; }); if (!p) break; pulls.push(...p); }
   if (!pulls.length) { toast("Plus de booster : reviens dans quelques minutes !"); return; }
   tick();
   const { again } = await playOpening({ pulls, packSrc: BOOSTER_ART[packIdx], quick, canAgain: S.get().stock > 0 });
@@ -164,6 +173,94 @@ $("#btnImport").addEventListener("click", () => {
 $("#btnReset").addEventListener("click", () => {
   if (confirm("Effacer toute ta progression ?")) { S.reset(); tick(); renderProfile(); toast("Progression réinitialisée"); }
 });
+
+// ---------- Comptes (Supabase) ----------
+let session = null;
+function refreshAll() {
+  tick(); renderProfile(); renderAccount();
+  if ($("#tab-collection").classList.contains("active")) renderCollection();
+  const prof = S.getProfile();
+  $("#accountBtn").textContent = session ? `👤 ${prof?.username || "Mon compte"}` : "👤 Se connecter";
+  $("#saveBox").classList.toggle("hidden", S.isRemote());
+}
+function modal(html, wire) {
+  const m = $("#authModal"); m.innerHTML = `<div class="modal-box">${html}</div>`; m.classList.remove("hidden");
+  m.querySelectorAll("[data-close]").forEach((b) => b.addEventListener("click", closeModal)); wire?.(m);
+}
+function closeModal() { $("#authModal").classList.add("hidden"); $("#authModal").innerHTML = ""; }
+$("#authModal").addEventListener("click", (e) => { if (e.target.id === "authModal") closeModal(); });
+const errText = (e) => ({ "Invalid login credentials": "E-mail ou mot de passe incorrect.", "User already registered": "Un compte existe déjà avec cet e-mail.",
+  "Email not confirmed": "Confirme d'abord ton e-mail (regarde ta boîte de réception).", "Password should be at least 6 characters": "Mot de passe trop court (6 caractères minimum)." }[e.message] || e.message);
+
+function showAuth(tab = "signin") {
+  const up = tab === "signup", reset = tab === "reset";
+  modal(`<h3>${up ? "Créer un compte" : reset ? "Mot de passe oublié" : "Se connecter"}</h3>
+    <p class="muted small">Ta collection et tes boosters seront sauvegardés et disponibles sur tous tes appareils.</p>
+    ${reset ? "" : `<div class="btn-col"><button class="btn" data-oauth="google">Continuer avec Google</button><button class="btn" data-oauth="discord">Continuer avec Discord</button></div><p class="muted small center">ou avec ton e-mail</p>`}
+    <form id="authForm" class="auth-form">
+      ${up ? '<input name="username" placeholder="Pseudo" maxlength="24" required autocomplete="nickname">' : ""}
+      <input name="email" type="email" placeholder="E-mail" required autocomplete="email">
+      ${reset ? "" : `<input name="password" type="password" placeholder="Mot de passe (6 caractères min.)" minlength="6" required autocomplete="${up ? "new-password" : "current-password"}">`}
+      <button class="btn primary" type="submit">${up ? "Créer mon compte" : reset ? "Envoyer le lien" : "Connexion"}</button>
+    </form><p id="authMsg" class="auth-msg"></p>
+    <div class="auth-links">${up ? '<a href="#" data-tab="signin">J\'ai déjà un compte</a>' : reset ? '<a href="#" data-tab="signin">Retour</a>' : '<a href="#" data-tab="signup">Créer un compte</a><a href="#" data-tab="reset">Mot de passe oublié ?</a>'}
+    <a href="#" data-close>Continuer en invité</a></div>`, (m) => {
+    m.querySelectorAll("[data-tab]").forEach((a) => a.addEventListener("click", (e) => { e.preventDefault(); showAuth(a.dataset.tab); }));
+    m.querySelectorAll("[data-oauth]").forEach((b) => b.addEventListener("click", () => auth.oauth(b.dataset.oauth).catch((e) => { m.querySelector("#authMsg").textContent = errText(e); })));
+    const msg = m.querySelector("#authMsg");
+    m.querySelector("#authForm").addEventListener("submit", async (e) => {
+      e.preventDefault(); const f = Object.fromEntries(new FormData(e.target)); msg.textContent = "…";
+      try {
+        if (up) { const r = await auth.signUp(f.email, f.password, f.username.trim()); msg.textContent = r.needsConfirmation ? "Compte créé ! Clique sur le lien reçu par e-mail pour le confirmer." : "Compte créé ✔"; }
+        else if (reset) { await auth.reset(f.email); msg.textContent = "Si un compte existe, un lien de réinitialisation vient d'être envoyé."; }
+        else { await auth.signIn(f.email, f.password); closeModal(); }
+      } catch (err) { msg.textContent = errText(err); }
+    });
+  });
+}
+function showRecovery() {
+  modal(`<h3>Nouveau mot de passe</h3><form id="authForm" class="auth-form"><input name="password" type="password" placeholder="Nouveau mot de passe" minlength="6" required autocomplete="new-password"><button class="btn primary" type="submit">Enregistrer</button></form><p id="authMsg" class="auth-msg"></p>`, (m) => {
+    m.querySelector("#authForm").addEventListener("submit", async (e) => { e.preventDefault(); try { await auth.setPassword(new FormData(e.target).get("password")); closeModal(); toast("Mot de passe modifié ✔"); } catch (err) { m.querySelector("#authMsg").textContent = errText(err); } });
+  });
+}
+function renderAccount() {
+  const box = $("#accountBox"); if (!configured && !session) { box.innerHTML = ""; return; }
+  if (!session) { box.innerHTML = `<h3>Compte</h3><p class="muted">Tu joues en <b>invité</b> : ta progression reste sur cet appareil. Connecte-toi pour la sauvegarder et la retrouver partout.</p><button class="btn primary" id="boxLogin">Se connecter / créer un compte</button>`;
+    $("#boxLogin").addEventListener("click", () => showAuth()); return; }
+  const prof = S.getProfile();
+  box.innerHTML = `<h3>Compte</h3><div class="acct">${prof?.avatar ? `<img src="${esc(prof.avatar)}" alt="" referrerpolicy="no-referrer">` : ""}<div><b>${esc(prof?.username || "Joueur")}</b><br><span class="muted small">${esc(session.user.email || "")} · connecté via ${providerLabel(session.user)}</span></div></div>
+    <p class="muted small">Ta collection et tes boosters sont sauvegardés sur le serveur.</p>
+    <form id="nameForm" class="auth-form inline"><input name="u" value="${esc(prof?.username || "")}" maxlength="24" required><button class="btn" type="submit">Changer le pseudo</button></form>
+    <div class="btn-row"><button class="btn danger" id="boxLogout">Se déconnecter</button></div>`;
+  $("#nameForm").addEventListener("submit", async (e) => { e.preventDefault(); const u = new FormData(e.target).get("u").trim(); if (!u) return;
+    try { await api.setUsername(u, session.user.id); S.applyServerState(await api.getState()); refreshAll(); toast("Pseudo modifié ✔"); } catch (err) { toast(err.message); } });
+  $("#boxLogout").addEventListener("click", () => auth.signOut().catch((err) => toast(err.message)));
+}
+$("#accountBtn").addEventListener("click", () => (session ? (showTab("profil")) : showAuth()));
+
+async function onSession(sess) {
+  if (!sess) { session = null; S.leaveRemote(); refreshAll(); return; }
+  try {
+    const st = await api.getState(); session = sess; S.enterRemote(api, st); refreshAll();
+    const local = S.localSnapshot(), n = Object.keys(local.collection || {}).length;
+    if (n > 0 && !st.imported && !Object.keys(st.collection).length && !st.stats.opened) offerImport(local, n);
+    else toast(`Connecté : ${st.profile?.username || "joueur"}`);
+  } catch (e) { console.error(e); toast("Connexion au serveur impossible : " + e.message); }
+}
+function offerImport(local, n) {
+  modal(`<h3>Importer ta progression d'invité ?</h3><p>Tu as <b>${n} cartes différentes</b> sur cet appareil. Elles peuvent être transférées <b>une seule fois</b> sur ton compte.</p>
+    <div class="btn-row center"><button class="btn primary" data-imp>Importer</button><button class="btn" data-close>Non merci</button></div>`, (m) => {
+    m.querySelector("[data-imp]").addEventListener("click", async () => { try { S.applyServerState(await api.importLocal(local)); closeModal(); refreshAll(); toast("Progression importée ✔"); } catch (e) { toast(e.message.includes("ALREADY") ? "Import impossible : ce compte a déjà commencé." : e.message); closeModal(); } });
+  });
+}
+(async function startAccounts() {
+  const client = window.__gmFakeSupabase;            // hook de test : un faux client peut être injecté avant le chargement
+  if (!configured && !client) return;
+  $("#accountBtn").classList.remove("hidden");
+  const sb = await initAccount({ onSession: onSession, onRecovery: showRecovery, client });
+  if (!sb) $("#accountBtn").classList.add("hidden");
+  if (sb && client) { const { data } = await client.auth.getSession(); onSession(data?.session ?? null); }
+})();
 
 // ---------- Appli installable (PWA) ----------
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});

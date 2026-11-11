@@ -82,9 +82,9 @@ export function initDuel({ S, toast, tick, esc }) {
     finish();
   }
 
-  function finish() {
+  async function finish() {
     const won = g.winner === 0;
-    const { rewarded, promo } = S.recordDuel(won);
+    const { rewarded, promo } = await S.recordDuel(won);
     $("#duelEnd").classList.remove("hidden");
     $("#duelEndMsg").innerHTML = won
       ? `🏆 Victoire !${rewarded ? " <b>+1 booster</b>" : " (récompenses du jour épuisées)"}${promo ? `<br>🎉 Carte promo obtenue : ${esc(promo.name)} (${promo.label})` : ""}`
