@@ -3035,5 +3035,62 @@ export const CARD_DATA = [
 "flavor": "-500 €, on assume.",
 "illustrator": "Claude (IA) · fan-made",
 "img": "cartes/P08.webp"
+},
+{
+"id": "P09",
+"label": "P09",
+"n": 1009,
+"name": "Baba la poutine",
+"category": "Joueur",
+"subtype": null,
+"color": "Neutre",
+"def": 110,
+"stars": 5,
+"rarity": "P",
+"printedRarity": "P",
+"attacks": [
+{
+"name": "Sauce brune",
+"cost": [
+"Neutre"
+],
+"damage": 80,
+"text": null
+}
+],
+"power": 80,
+"effect": "PROVOCATION: L'attaquant face à ce Joueur doit le cibler.",
+"flavor": "Une poutine et ça repart.",
+"illustrator": "Claude (IA) · fan-made",
+"img": "cartes/P09.webp"
+},
+{
+"id": "P10",
+"label": "P10",
+"n": 1010,
+"name": "Tarz en pétard",
+"category": "Joueur",
+"subtype": null,
+"color": "Neutre",
+"def": 80,
+"stars": 5,
+"rarity": "P",
+"printedRarity": "P",
+"attacks": [
+{
+"name": "Manette brisée",
+"cost": [
+"Neutre",
+"Neutre"
+],
+"damage": 120,
+"text": null
+}
+],
+"power": 120,
+"effect": "RIPOSTE: Lorsqu'il est vaincu, vous pouvez déclencher une des attaques de ce Joueur pour un coût diminué de 1, en ciblant le Joueur attaquant.",
+"flavor": "Elle a commencé.",
+"illustrator": "Claude (IA) · fan-made",
+"img": "cartes/P10.webp"
 }
 ];
