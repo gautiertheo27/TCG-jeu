@@ -1,6 +1,6 @@
 // Sauvegarde + système de boosters (1 toutes les 10 minutes, 10 max en stock).
 // Deux modes : « local » (invité, navigateur) et « remote » (compte connecté : stock et collection gérés par le serveur).
-import { CARDS, BY_ID, BY_RARITY, PACK_SLOTS, PROMO_CHANCE_ON_WIN, SET } from "./cards.js";
+import { CARDS, BY_ID, BY_RARITY, RARITIES, PACK_SLOTS, PROMO_CHANCE_ON_WIN, SET } from "./cards.js";
 
 export let BOOSTER_INTERVAL_MS = 10 * 60 * 1000;   // 1 booster toutes les 10 minutes
 export let MAX_STOCK = 10;                          // cumulable jusqu'à 10 boosters en stock (au-delà, le décompte s'arrête)
@@ -44,7 +44,14 @@ function fromServer(r) {
 }
 export function enterRemote(api, serverState) { mode = "remote"; remoteApi = api; fromServer(serverState); }
 export function applyServerState(serverState) { fromServer(serverState); }
-export function leaveRemote() { mode = "local"; remoteApi = null; profile = null; clockOffset = 0; state = localState; BOOSTER_INTERVAL_MS = 10 * 60 * 1000; MAX_STOCK = 10; }
+// Déconnexion. Avec un compte obligatoire (locked), plus aucune collection n'est visible tant qu'on ne s'est pas reconnecté :
+// l'état affiché est vide, et la progression d'invité enregistrée sur l'appareil n'est pas montrée.
+export function leaveRemote(locked = false) {
+  remoteApi = null; profile = null; clockOffset = 0; BOOSTER_INTERVAL_MS = 10 * 60 * 1000; MAX_STOCK = 10;
+  if (locked) { mode = "locked"; state = { version: 3, stock: 0, lastCredit: Date.now(), collection: {}, stats: { opened: 0, duelsWon: 0, duelsPlayed: 0 }, duelRewards: { day: today(), count: 0 } }; }
+  else { mode = "local"; state = localState; }
+}
+export const isLocked = () => mode === "locked";
 export function localSnapshot() { return localState; }
 
 function load() {
@@ -64,6 +71,7 @@ export function get() { return state; }
 
 // Crédite les boosters gagnés depuis le dernier passage. Renvoie le nombre gagné.
 export function creditBoosters(now = nowMs()) {
+  if (mode === "locked") return 0;
   if (now < state.lastCredit) { state.lastCredit = now; save(); return 0; } // horloge reculée
   if (state.stock >= MAX_STOCK) { state.lastCredit = now; save(); return 0; }
   const earned = Math.floor((now - state.lastCredit) / BOOSTER_INTERVAL_MS);
@@ -76,6 +84,7 @@ export function creditBoosters(now = nowMs()) {
 }
 
 export function msUntilNext(now = nowMs()) {
+  if (mode === "locked") return null;
   if (state.stock >= MAX_STOCK) return null;
   return Math.max(0, state.lastCredit + BOOSTER_INTERVAL_MS - now);
 }
@@ -92,12 +101,14 @@ function rollRarity(table) {
 export function rollBooster() {
   const out = [];
   for (const slot of PACK_SLOTS) {
+    const part = [];
     for (let i = 0; i < slot.count; i++) {
-      const rar = rollRarity(slot.table);
-      const card = pick(BY_RARITY[rar]);
-      const holo = !!slot.foil;
-      out.push({ id: card.id, holo, slot: slot.label });
+      const card = pick(BY_RARITY[rollRarity(slot.table)]);
+      part.push({ id: card.id, holo: !!slot.foil, slot: slot.label });
     }
+    // Ordre réel du paquet : les moins rares d'abord, la plus belle carte en dernier.
+    if (slot.sort) part.sort((x, y) => RARITIES[BY_ID[x.id].rarity].order - RARITIES[BY_ID[y.id].rarity].order);
+    out.push(...part);
   }
   return out;
 }
@@ -138,6 +149,7 @@ function addCard(id, holo = false) {
 }
 
 export async function recordDuel(won) {
+  if (mode === "locked") return { rewarded: false, promo: null };
   if (mode === "remote") {
     try {
       const r = await remoteApi.recordDuel(won); fromServer(r.state);

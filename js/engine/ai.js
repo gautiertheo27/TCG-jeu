@@ -59,7 +59,7 @@ export async function aiTurn(g, pi, pause = async () => {}) {
   for (const s of g.activables(pi)) { if (Math.random() < 0.5) { await g.activate(pi, s); await pause(); } }
   // Phase de combat
   if (g.turn > 1 && g.winner === null) {
-    g.phase = "combat"; g.update();
+    g.beginCombat();
     for (let guard = 0; guard < 12 && g.winner === null; guard++) {
       const cands = g.slots(pi).filter((s) => g.canAttack(pi, s));
       let best = null;

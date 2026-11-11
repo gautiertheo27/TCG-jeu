@@ -37,19 +37,26 @@ export const MISSING = Array.from({ length: SET.total }, (_, i) => i + 1).filter
 // ---------- Booster : 10 cartes, révélées dans l'ordre réel du paquet ----------
 // Essence → communes → peu communes → reverse holo → rare garantie (toujours en dernier).
 // Les promos (P) sortent rarement dans le dernier emplacement (4 %) et se gagnent aussi en Duel.
-// Dernier emplacement : calculé pour que, PAR CARTE, chaque Promo sorte dans 1 booster sur 200, chaque Légendaire sur 100 et chaque Épique sur ≈ 60
-// (la Rare prend le reste, ≈ 1 sur 40). Les probabilités se recalculent seules quand on ajoute des cartes.
-function lastSlotTable() {
-  const n = (r) => BY_RARITY[r]?.length || 0, round = (x) => Math.round(x * 10000) / 10000;
-  const pP = round(n("P") / 200), pL = round(n("L") / 100), pE = round(Math.min(n("E") / 60, 1 - pP - pL - 0.2));
-  return [["P", pP], ["L", pL], ["E", pE], ["R", round(1 - pP - pL - pE)]].filter(([r]) => n(r) > 0);
+// Cartes 9 et 10 (la carte 10 peut aussi être une Commune ou une Peu commune, rarement) : calculées pour que, PAR CARTE, chaque Promo sorte dans 1 booster sur 200, chaque Légendaire sur 100 et chaque Épique sur 60
+// (la Rare prend le reste). Les probabilités se recalculent seules quand on ajoute des cartes.
+// Part de Communes / Peu communes possible à la carte 10 (chacune bien plus rare que la Rare).
+const TEN_C = 0.05, TEN_PC = 0.05;
+function slotTables() {
+  const n = (r) => BY_RARITY[r]?.length || 0, round = (x) => Math.round(x * 10000) / 10000, f = 1 - TEN_C - TEN_PC;
+  // Pour viser « a » par carte et par booster avec la carte 9 (proba x·n) et la carte 10 (proba f·x·n) : f·x² - (1+f)·x + a = 0
+  const solve = (r, a) => n(r) * ((1 + f) - Math.sqrt((1 + f) * (1 + f) - 4 * f * a)) / (2 * f);
+  const p9 = { P: round(solve("P", 1 / 200)), L: round(solve("L", 1 / 100)), E: round(solve("E", 1 / 60)) };
+  p9.R = round(1 - p9.P - p9.L - p9.E);
+  const slot9 = [["P", p9.P], ["L", p9.L], ["E", p9.E], ["R", p9.R]].filter(([r]) => n(r) > 0);
+  const slot10 = [["C", TEN_C], ["PC", TEN_PC], ...slot9.map(([r, p]) => [r, round(p * f)])];
+  return { slot9, slot10 };
 }
 export const PACK_SLOTS = [
-  { label: "Essence",      count: 1, table: [["ES", 1]] },
-  { label: "Commune",      count: 4, table: [["C", 1]] },
-  { label: "Peu commune",  count: 3, table: [["PC", 1]] },
-  { label: "Reverse holo", count: 1, foil: true, table: [["C", 0.55], ["PC", 0.30], ["R", 0.15]] },
-  { label: "Rare garantie", count: 1, table: lastSlotTable() },
+  { label: "Cartes 1 à 6 : Commune ou Peu commune (Communes d'abord)", count: 6, sort: true, table: [["C", 0.60], ["PC", 0.40]] },
+  { label: "Carte 7 : Essence reverse", count: 1, foil: true, table: [["ES", 1]] },
+  { label: "Carte 8 : Reverse", count: 1, foil: true, table: [["C", 0.55], ["PC", 0.30], ["R", 0.15]] },
+  { label: "Carte 9 : Rare, Épique, Légendaire ou Promo", count: 1, table: slotTables().slot9 },
+  { label: "Carte 10 : Rare, Épique, Légendaire ou Promo (ou, plus rarement, Commune / Peu commune)", count: 1, table: slotTables().slot10 },
 ];
 export const PACK_SIZE = PACK_SLOTS.reduce((s, x) => s + x.count, 0);
 export const PROMO_CHANCE_ON_WIN = 0.15;

@@ -2,7 +2,7 @@ import { CARDS, BY_ID, RARITIES, COLORS, SET, PACK_SLOTS, PACK_SIZE, MISSING, bo
 import * as S from "./state.js";
 import { cardHTML, placeholderHTML, esc } from "./cardview.js";
 import { initDuel } from "./duel-ui.js";
-import { playOpening, isOpening } from "./opening.js";
+import { playOpening, isOpening, abortOpening } from "./opening.js";
 import { unlock, isMuted, setMuted, sfx } from "./sound.js";
 import { configured, initAccount, auth, api, providerLabel, enabledProviders } from "./account.js";
 
@@ -305,7 +305,12 @@ function renderAccount() {
 $("#accountBtn").addEventListener("click", () => (session ? (showTab("profil")) : showAuth()));
 
 async function onSession(sess) {
-  if (!sess) { session = null; S.leaveRemote(); refreshAll(); if (required) showAuth("signin"); return; }
+  if (!sess) {
+    session = null; S.leaveRemote(required);                    // compte obligatoire : plus de collection visible tant qu'on n'est pas reconnecté
+    abortOpening(); $("#zoom").classList.add("hidden"); duelUI.showSetup(); showTab("boosters"); refreshAll();
+    if (required) showAuth("signin");
+    return;
+  }
   try {
     const st = await api.getState(); session = sess; S.enterRemote(api, st); closeModal(); refreshAll();
     const local = S.localSnapshot(), n = Object.keys(local.collection || {}).length;

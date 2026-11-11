@@ -8,10 +8,11 @@ export const HAND_MAX = 5;
 export const PV_COUNT = 4;
 
 let UID = 1;
-export const inst = (id) => ({ uid: UID++, id });
+export const inst = (id) => ({ uid: UID++, id });          // (utilisé seulement par les tests ; chaque partie a son propre compteur)
+// Générateur pseudo-aléatoire à graine : deux navigateurs qui reçoivent la même graine jouent exactement la même partie.
+export function mulberry32(seed) { let a = seed >>> 0; return () => { a = (a + 0x6d2b79f5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 export const C = (x) => BY_ID[x.id];
 export const spec = (x) => SPECS[x.id] || {};
-const shuffle = (a) => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 
 // Mots-clés lus sur la carte (le texte commence par le mot-clé).
 const KW = ["PROVOCATION", "GARDE", "BUFF", "RIPOSTE", "LÉGION", "SHIELD"];
@@ -22,10 +23,12 @@ export function baseKeywords(card) {
 export const hasResilience = (card) => card.category !== "Joueur" && card.category !== "Essence" && /Résilience/i.test(card.effect || "");
 
 export class Game {
-  constructor({ decks, names, ai, ask, onUpdate, log }) {
+  constructor({ decks, names, ai, ask, onUpdate, log, seed = null }) {
+    this.rand = seed === null ? Math.random : mulberry32(seed);      // aléatoire propre à la partie (reproductible avec une graine)
+    this.uidn = 1; const mk = (id) => ({ uid: this.uidn++, id });   // identifiants propres à la partie
     this.players = [0, 1].map((i) => ({
       i, name: names[i], isAI: !!ai[i],
-      club: shuffle(decks[i].club.map(inst)), reserve: shuffle(decks[i].reserve.map(inst)),
+      club: this.shuffle(decks[i].club.map(mk)), reserve: this.shuffle(decks[i].reserve.map(mk)),
       hand: [], pv: [], discard: [], essences: [], lanes: [null, null, null],
       coachPlayed: false, benchSwapUsed: false, pvRecoveredThisTurn: 0, attacksThisTurn: 0,
     }));
@@ -34,6 +37,7 @@ export class Game {
     this._ask = ask; this._update = onUpdate || (() => {}); this._log = log || (() => {});
   }
 
+  shuffle(a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(this.rand() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
   // ---------- utilitaires ----------
   P(pi) { return this.players[pi]; }
   opp(pi) { return 1 - pi; }
@@ -130,7 +134,7 @@ export class Game {
       P.hand.push(P.club.shift());
     }
   }
-  shuffleInto(pile, cards) { pile.push(...cards); shuffle(pile); }
+  shuffleInto(pile, cards) { pile.push(...cards); this.shuffle(pile); }
   discardCard(pi, c) { this.P(pi).discard.push(c); }
 
   // ---------- engager / désengager ----------
@@ -241,7 +245,7 @@ export class Game {
       if (redo) { this.shuffleInto(P.club, P.hand); P.hand = P.club.splice(0, 5); }
       P.pv = P.club.splice(0, PV_COUNT);
     }
-    this.active = Math.random() < 0.5 ? 0 : 1;
+    this.active = this.rand() < 0.5 ? 0 : 1;
     this.log(`${this.P(this.active).name} commence la partie.`);
   }
 
@@ -307,6 +311,7 @@ export class Game {
     this.update(); return true;
   }
 
+  beginCombat() { this.phase = "combat"; this.update(); }
   // ---------- combat ----------
   canAttack(pi, slot) {
     return this.phase === "combat" && this.active === pi && !slot.engaged && !(slot.cantAttackUntil >= this.turn)

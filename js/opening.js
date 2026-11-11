@@ -11,6 +11,9 @@ const RARE = new Set(["R", "E", "L", "S", "P"]);        // fond lumineux sur le 
 const BIG = new Set(["E", "L", "S", "P"]);              // explosion d'étincelles au retournement
 
 export function isOpening() { return !$("#opening").classList.contains("hidden"); }
+let activeFinish = null;
+// Ferme l'ouverture en cours (par exemple à la déconnexion).
+export function abortOpening() { const r = $("#opening"); r.classList.add("hidden"); r.innerHTML = ""; document.body.classList.remove("no-scroll"); activeFinish?.({ again: false }); activeFinish = null; }
 
 // pulls : [{ id, holo, isNew }], packSrc : image du paquet, opts.quick : saute l'animation (récap seulement)
 export async function playOpening({ pulls, packSrc, quick = false, canAgain = false }) {
@@ -32,7 +35,7 @@ export async function playOpening({ pulls, packSrc, quick = false, canAgain = fa
     <button class="op-skip btn" type="button">Révélation rapide ⏩</button>
     <div class="op-summary hidden"></div>`;
   const q = (s) => $(s, root);
-  let finish; const done = new Promise((r) => (finish = r));
+  let finish; const done = new Promise((r) => (finish = r)); activeFinish = finish;
   let again = false, ended = false, fast = false, ctl = null;
 
   const hint = (t) => (q(".op-hint").textContent = t);
