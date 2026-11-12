@@ -140,3 +140,17 @@ footer { padding-bottom: 110px; }
 .pack-bubble { position: relative; width: fit-content; max-width: 92%; margin: 0 auto 14px; background: #fff; color: #3a2a4a; font-weight: 700; font-size: .95rem; text-align: center; padding: 10px 20px; border-radius: 999px; box-shadow: 0 6px 18px #0006; animation: bubbleBob 2.4s ease-in-out infinite; }
 .pack-bubble::after { content: ""; position: absolute; left: 50%; bottom: -8px; width: 16px; height: 16px; background: #fff; transform: translateX(-50%) rotate(45deg); border-radius: 3px; }
 @keyframes bubbleBob { 50% { transform: translateY(-4px); } }
+
+/* ---------- Duel sur mobile : la main est visible, les boutons tiennent sur une ligne ---------- */
+@media (max-width: 899px) {
+  #duelBoard { display: flex; flex-direction: column; }
+  #duelBoard .playmat { order: 0; } #duelBoard .tuto-bar { order: 1; } #duelBoard .bd-hand { order: 2; } #duelBoard .duel-end { order: 3; }
+  #duelBoard .bd-controls { order: 4; position: sticky; bottom: 0; width: 100%; max-width: none; padding: 8px 0 max(8px, env(safe-area-inset-bottom)); background: linear-gradient(transparent, var(--bg) 35%); justify-content: stretch; }
+  #duelBoard .bd-logbox { order: 5; }
+  #duelBoard .bd-actions { display: flex; flex-wrap: nowrap; width: 100%; gap: 6px; }
+  #duelBoard .bd-actions .btn { flex: 1 1 0; min-width: 0; padding: 8px 6px; font-size: .82rem; line-height: 1.15; min-height: 46px; white-space: normal; }
+  #duelBoard .bd-actions #btnHelp { flex: 0 0 46px; font-size: 0; padding: 0; } #duelBoard .bd-actions #btnHelp::before { content: "💡"; font-size: 1.25rem; }
+  #duelBoard .bd-actions #btnEnd { flex: 1.4 1 0; font-size: .92rem; }
+  #duelBoard .bd-hand { margin: 8px auto 4px; }
+}
+@media (max-width: 899px) { #duelBoard #btnHelp:not(.on) { opacity: .5; } }
