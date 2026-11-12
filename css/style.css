@@ -511,3 +511,19 @@ body.no-scroll { overflow: hidden; }
           mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='96'%3E%3Ctext x='0' y='30' font-family='Arial Black,Impact,sans-serif' font-size='21' font-weight='900' letter-spacing='3' fill='black'%3ETOUT COMMENCE ICI%3C/text%3E%3Ctext x='150' y='78' font-family='Arial Black,Impact,sans-serif' font-size='21' font-weight='900' letter-spacing='3' fill='black'%3ETOUT COMMENCE ICI%3C/text%3E%3Ctext x='-150' y='78' font-family='Arial Black,Impact,sans-serif' font-size='21' font-weight='900' letter-spacing='3' fill='black'%3ETOUT COMMENCE ICI%3C/text%3E%3C/svg%3E") 0 0 / 62cqw auto;
 }
 @media (prefers-reduced-motion: reduce) { .card[data-r="E"]:has(> img)::before, .card[data-r="E"]:has(> img)::after { animation: none; } }
+
+/* ---------- Aide : bulles, anatomie des cartes, combos ---------- */
+.tipbubble { position: fixed; z-index: 100000; max-width: min(300px, 88vw); padding: 9px 12px; border-radius: 10px; background: #2a2142; color: #f1ecff; border: 1.5px solid #ff79b8; box-shadow: 0 8px 26px #000a; font-size: .85rem; line-height: 1.4; pointer-events: none; }
+.tipbubble.hidden { display: none; }
+#btnHelp.on { border-color: #ffd36e; color: #ffe9a8; }
+[data-tip] { cursor: help; } [data-tip][data-tip-int] { cursor: pointer; } .lane[data-tip], .hcard[data-tip] { cursor: pointer; }
+.sheet-help { margin-top: 10px; background: #1d1830; border: 1px solid #3a3158; border-radius: 10px; padding: 8px 12px; } .sheet-help summary { cursor: pointer; font-weight: 800; color: #ffd36e; }
+.sheet-help p { margin: 8px 0; font-size: .86rem; line-height: 1.45; color: #d9d1e6; } .combo-line { border-top: 1px dashed #3a3158; padding-top: 8px; color: #ffe9a8 !important; }
+#duelModal .modal-box:has(.tuto-page) { max-width: min(920px, 96vw); }
+.tuto-page .tip, .tuto-page div.tip { background: #2b2210; border: 1px solid #a8821f; color: #ffe9a8; border-radius: 10px; padding: 8px 12px; margin-top: 10px; }
+.kwlist { list-style: none; padding: 0; } .kwlist li { margin: 9px 0; padding: 8px 10px; background: #1d1830; border-left: 3px solid #ff79b8; border-radius: 8px; }
+.anat { display: flex; gap: 14px; align-items: flex-start; flex-wrap: wrap; margin: 8px 0; } .anat-img { position: relative; width: min(300px, 70vw); flex: none; } .anat-img img { width: 100%; display: block; border-radius: 10px; }
+.mk { position: absolute; transform: translate(-50%, -50%); width: 22px; height: 22px; border-radius: 50%; background: #ffd36e; color: #1b1226; font-weight: 800; font-size: .78rem; display: grid; place-items: center; border: 2px solid #1b1226; box-shadow: 0 2px 6px #000a; }
+.anat-leg { flex: 1; min-width: 240px; margin: 0; padding-left: 22px; font-size: .85rem; line-height: 1.4; } .anat-leg li { margin: 5px 0; }
+.combo { display: flex; gap: 12px; align-items: center; margin: 10px 0; padding: 8px; background: #1d1830; border-radius: 10px; border: 1px solid #3a3158; } .combo p { margin: 0; font-size: .86rem; line-height: 1.4; }
+.cb-cards { display: flex; align-items: center; gap: 4px; flex: none; } .cb-img { width: 66px; border-radius: 5px; display: block; } .cb-plus { font-weight: 800; color: #ffd36e; }

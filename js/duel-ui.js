@@ -8,6 +8,7 @@ import { Sync } from "./pvp.js";
 import { makeFx } from "./duel-fx.js";
 import { deckViewHTML, deckPickerHTML, wireDeckPicker } from "./deckview.js";
 import { TUTO_PAGES, tutoHint } from "./tuto.js";
+import { TIPS, KEYWORD_INFO, PHASE_INFO, CATEGORY_INFO, tipsFor, comboFor } from "./glossary.js";
 
 const $ = (s, r = document) => r.querySelector(s);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -202,8 +203,49 @@ export function initDuel({ S, toast, tick, esc }) {
     $("#btnEnd").classList.toggle("hidden", !(myTurn && (g.phase === "action" || g.phase === "combat")));
     $("#btnEnd").textContent = g.phase === "combat" ? "Fin de tour ▶" : "Passer le tour ▶";
     $("#btnCombat").disabled = busy; $("#btnEnd").disabled = busy;
-    renderTuto(myTurn);
+    renderTuto(myTurn); applyTips();
   }
+
+  // ---------- bulles d'aide ----------
+  let helpOn = true; try { helpOn = localStorage.getItem("gmtcg.help") !== "0"; } catch (_) {}
+  const bubble = document.createElement("div"); bubble.className = "tipbubble hidden"; document.body.appendChild(bubble);
+  let tipTimer = null, lastPtr = "mouse";
+  const setTip = (el, text, interactive = false) => { if (!el) return; el.dataset.tip = text; if (interactive) el.dataset.tipInt = "1"; else delete el.dataset.tipInt; };
+  const firstSentence = (t) => (t || "").split(". ")[0].replace(/\.$/, "") + ".";
+  function applyTips() {
+    if (!g) return;
+    const q = (sel, fn) => board.querySelectorAll(sel).forEach(fn);
+    q(".zone.pvz", (e) => setTip(e, TIPS.pv)); q(".pile.club", (e) => setTip(e, TIPS.club)); q(".pile.reserve", (e) => setTip(e, TIPS.reserve)); q(".pile.discard", (e) => setTip(e, TIPS.discard, true));
+    q(".bd-ess", (e) => setTip(e, TIPS.essences)); q(".ess", (e) => setTip(e, `${e.title || "Essence"} — ${TIPS.essences}`));
+    q(".lane .def", (e) => setTip(e, TIPS.def)); q(".lane .eng-badge", (e) => setTip(e, TIPS.engaged)); q(".lane .obj", (e) => setTip(e, `${e.title} — ${TIPS.obj}`));
+    q(".lane .kw", (e) => { const k = e.textContent.trim().toUpperCase(); setTip(e, `${e.textContent.trim()} : ${KEYWORD_INFO[k] || ""}`); });
+    q(".lane.empty", (e) => setTip(e, TIPS.lane, true));
+    q(".lane[data-uid]", (e) => { const s = g.P(+e.dataset.pi).lanes[+e.dataset.lane]; if (!s) return; setTip(e, `${C(s).name} — ${firstSentence(CATEGORY_INFO.Joueur)} Touche la carte pour voir ses attaques et ses conseils.`, true); });
+    document.querySelectorAll("#bdSteps i").forEach((e, i) => setTip(e, PHASE_INFO[STEPS[i][0]]));
+    setTip($("#btnCombat"), TIPS.btnCombat); setTip($("#btnEnd"), TIPS.btnEnd); setTip($("#btnForfeit"), TIPS.btnForfeit); setTip($("#bdHand"), TIPS.hand, true);
+    q(".hand-backs", (e) => setTip(e, TIPS.oppHand));
+    q(".hcard", (e) => { const c = g.P(SEAT).hand[+e.dataset.i]; if (c) setTip(e, `${C(c).name} (${C(c).category}) — ${firstSentence(CATEGORY_INFO[C(c).category])} Touche pour lire la carte et la jouer.`, true); });
+  }
+  function showTip(el) {
+    if (!helpOn || !el?.dataset.tip) return;
+    bubble.textContent = el.dataset.tip; bubble.classList.remove("hidden");
+    const r = el.getBoundingClientRect(), b = bubble.getBoundingClientRect(), vw = innerWidth;
+    let x = r.left + r.width / 2 - b.width / 2; x = Math.max(8, Math.min(vw - b.width - 8, x));
+    let y = r.top - b.height - 10; if (y < 8) y = r.bottom + 10;
+    bubble.style.left = x + "px"; bubble.style.top = y + "px";
+  }
+  const hideTip = () => { clearTimeout(tipTimer); bubble.classList.add("hidden"); };
+  document.addEventListener("pointerdown", (e) => { lastPtr = e.pointerType || "mouse"; }, true);
+  board.addEventListener("pointerover", (e) => { if (e.pointerType !== "mouse") return; const el = e.target.closest("[data-tip]"); if (el) showTip(el); else hideTip(); });
+  board.addEventListener("pointerleave", hideTip); window.addEventListener("scroll", hideTip, { passive: true });
+  board.addEventListener("click", (e) => {                 // au toucher : les éléments purement informatifs affichent leur bulle
+    if (!helpOn || lastPtr === "mouse") return;
+    const el = e.target.closest("[data-tip]:not([data-tip-int])");
+    if (el && board.contains(el)) { e.stopPropagation(); e.preventDefault(); showTip(el); clearTimeout(tipTimer); tipTimer = setTimeout(hideTip, 5500); } else hideTip();
+  }, true);
+  const helpLabel = () => { $("#btnHelp").textContent = helpOn ? "💡 Bulles d'aide : oui" : "💡 Bulles d'aide : non"; $("#btnHelp").classList.toggle("on", helpOn); };
+  $("#btnHelp").addEventListener("click", () => { helpOn = !helpOn; try { localStorage.setItem("gmtcg.help", helpOn ? "1" : "0"); } catch (_) {} hideTip(); helpLabel(); toast(helpOn ? "Bulles d'aide activées : survole ou touche un élément." : "Bulles d'aide coupées."); });
+  helpLabel();
 
   // ---------- mode tuto ----------
   function openTuto() {
@@ -213,7 +255,7 @@ export function initDuel({ S, toast, tick, esc }) {
       openModal(`<h3>🎓 ${esc(p.title)} <small class="muted">(${i + 1}/${TUTO_PAGES.length})</small></h3><div class="tuto-page">${p.html}</div>
         <div class="btn-row center">${i ? '<button class="btn" data-prev>◀ Précédent</button>' : ""}<button class="btn primary" data-next>${last ? "Commencer la partie guidée ▶" : "Suivant ▶"}</button><button class="btn" data-close>Fermer</button></div>`, (el) => {
         el.querySelector("[data-prev]")?.addEventListener("click", () => { i--; page(); });
-        el.querySelector("[data-next]").addEventListener("click", () => { if (last) { closeModal(); tuto = true; start(); } else { i++; page(); } });
+        el.querySelector("[data-next]").addEventListener("click", () => { if (last) { closeModal(); tuto = true; if (!helpOn) { helpOn = true; helpLabel(); } start(); } else { i++; page(); } });
       });
     };
     page();
@@ -292,6 +334,7 @@ export function initDuel({ S, toast, tick, esc }) {
     openModal(`<div class="sheet"><div class="sheet-card">${cardHTML(k)}</div>
       <div class="sheet-side"><h3>${esc(k.name)}</h3><p class="muted small">${esc(k.category)}${k.subtype ? " · " + esc(k.subtype) : ""} · ${esc(k.color || "")}</p>
       ${info.map((x) => `<p>${x}</p>`).join("")}
+      <details class="sheet-help" ${helpOn || tuto ? "open" : ""}><summary>💡 Comprendre cette carte</summary>${tipsFor(k).map((t) => `<p>${esc(t)}</p>`).join("")}${comboFor(k) ? `<p class="combo-line">🤝 <b>Combos</b> : ${esc(comboFor(k))}</p>` : ""}</details>
       <div class="btn-col">${buttons.map((b, i) => `<button class="btn${b.primary ? " primary" : ""}" data-b="${i}" ${b.disabled ? "disabled" : ""}>${esc(b.label)}</button>`).join("")}
       <button class="btn" data-close>Fermer</button></div></div></div>`, (el) => {
       el.querySelectorAll("[data-b]").forEach((b) => b.addEventListener("click", () => { closeModal(); buttons[+b.dataset.b].fn?.(); }));
