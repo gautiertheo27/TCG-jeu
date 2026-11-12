@@ -3254,5 +3254,52 @@ export const CARD_DATA = [
 "flavor": "Circulez, y'a rien à voir.",
 "illustrator": "Claude (IA) · fan-made",
 "img": "cartes/P16.webp"
+},
+{
+"id": "P17",
+"label": "P17",
+"n": 1017,
+"name": "Mendo",
+"category": "Coach",
+"subtype": "Instant",
+"color": "Neutre",
+"def": null,
+"stars": 0,
+"rarity": "P",
+"printedRarity": "P",
+"attacks": [],
+"power": 0,
+"effect": "Vos Joueurs ont +20 Attaque jusqu'à la fin du tour. | Résilience: Piochez 1 carte.",
+"flavor": "Plan B, on respire.",
+"illustrator": "Claude (IA) · fan-made",
+"img": "cartes/P17.webp"
+},
+{
+"id": "P18",
+"label": "P18",
+"n": 1018,
+"name": "Erza",
+"category": "Joueur",
+"subtype": null,
+"color": "Neutre",
+"def": 100,
+"stars": 3,
+"rarity": "P",
+"printedRarity": "P",
+"attacks": [
+{
+"name": "Billet Major",
+"cost": [
+"Neutre"
+],
+"damage": 70,
+"text": "Lorsque ce Joueur est déployé, regardez les 3 cartes du dessus de votre Club et ajoutez-en 1 à votre main. Remettez les autres en dessous."
+}
+],
+"power": 70,
+"effect": null,
+"flavor": "Buy le billet Major.",
+"illustrator": "Claude (IA) · fan-made",
+"img": "cartes/P18.webp"
 }
 ];
