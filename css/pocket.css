@@ -134,3 +134,9 @@ footer { padding-bottom: 110px; }
 .op-bar.hidden { display: none; } .op-bar b { letter-spacing: .3px; } .op-bar em { font-style: normal; color: #e0388f; font-weight: 800; animation: barArrows 1s ease-in-out infinite; }
 .op-knob { position: absolute; left: calc(4px + var(--p, 0) * (100% - 44px)); top: 50%; transform: translateY(-50%); width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; font-style: normal; background: linear-gradient(#ff4fa3, #c2185b); color: #fff; box-shadow: 0 2px 8px #0006; }
 @keyframes barArrows { 50% { transform: translateX(6px); opacity: .6; } }
+
+/* ---------- Bulle au-dessus du paquet (accueil) ---------- */
+.pack-wrap { position: relative; }
+.pack-bubble { position: relative; width: fit-content; max-width: 92%; margin: 0 auto 14px; background: #fff; color: #3a2a4a; font-weight: 700; font-size: .95rem; text-align: center; padding: 10px 20px; border-radius: 999px; box-shadow: 0 6px 18px #0006; animation: bubbleBob 2.4s ease-in-out infinite; }
+.pack-bubble::after { content: ""; position: absolute; left: 50%; bottom: -8px; width: 16px; height: 16px; background: #fff; transform: translateX(-50%) rotate(45deg); border-radius: 3px; }
+@keyframes bubbleBob { 50% { transform: translateY(-4px); } }

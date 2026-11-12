@@ -114,6 +114,7 @@ function tick() {
   const ob = $("#openOne"); ob.disabled = st <= 0 || busy || opening;
   ob.textContent = opening ? "Ouverture…" : st > 0 ? "Ouvrir un booster" : next === null ? "Aucun booster" : `Prochain booster dans ${fmt(next)}`;
   $("#boosterPack").classList.toggle("empty", st <= 0);
+  $("#packBubble").textContent = st > 1 ? `Tu peux ouvrir ${st} boosters.` : st === 1 ? "Tu peux ouvrir un booster." : next === null ? "Aucun booster." : `Prochain booster dans ${fmt(next)}.`;
 }
 
 let opening = false;                       // une ouverture est en cours (attente du serveur ou animation)
