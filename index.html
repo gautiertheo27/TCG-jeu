@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#0d0b12">
+  <meta name="theme-color" content="#eef3fa">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="GM TCG">
@@ -13,20 +13,19 @@
   <meta name="description" content="Jeu de cartes à collectionner fan-made Gentle Mates : ouvre 2 boosters par heure, complète ta collection et affronte l'IA.">
   <link rel="icon" href="icons/icon-192.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;600;800&family=Nunito:wght@500;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/pocket.css">
 </head>
 <body>
+  <div id="splash" aria-live="polite">
+    <div class="sp-orbit"><i style="--c:#ff4fa3"></i><i style="--c:#ff8a2a"></i><i style="--c:#2fbf8f"></i><i style="--c:#8b5cf6"></i><i style="--c:#f5c518"></i><i style="--c:#c084fc"></i><i style="--c:#6cc24a"></i><i style="--c:#3b82f6"></i><i style="--c:#38bdf8"></i></div>
+    <div class="sp-card"><div class="sp-row"><span>Téléchargement des données…</span><b id="spPct">0 %</b></div><div class="sp-bar"><u id="spFill"></u></div></div>
+  </div>
+  <script>(function(){var p=0,t=setInterval(function(){p=Math.min(92,p+(92-p)*.08+.4);var f=document.getElementById("spFill"),n=document.getElementById("spPct");if(f){f.style.width=p+"%";n.textContent=Math.round(p)+" %";}},90);window.__splashTimer=t;})();</script>
   <header class="top">
     <div class="brand"><span class="logo">GM</span><div><strong>Gentle Mates TCG</strong><small>Extension 1 · 122 cartes</small></div></div>
-    <nav class="tabs" role="tablist">
-      <button data-tab="boosters" class="active">Boosters</button>
-      <button data-tab="collection">Collection</button>
-      <button data-tab="duel">Duel</button>
-      <button data-tab="amis">Amis <span id="friBadge" class="badge-n hidden">0</span></button>
-      <button data-tab="livre">Livre</button>
-      <button data-tab="profil">Profil</button>
-    </nav>
+    <span class="top-sp"></span>
     <button id="installBtn" class="btn install hidden">📲 Installer</button>
     <button id="accountBtn" class="btn account hidden" type="button">👤 Se connecter</button>
     <button id="soundBtn" class="btn account" type="button" aria-label="Son" title="Activer / couper le son">🔊</button>
@@ -36,7 +35,7 @@
   <main>
     <!-- BOOSTERS -->
     <section id="tab-boosters" class="tab active">
-      <div class="booster-zone">
+      <div class="home-card"><div class="booster-zone">
         <div class="pack-wrap">
         <button id="boosterPack" class="pack" aria-label="Ouvrir un booster">
           <img id="packArt" class="pack-art hidden" alt="" draggable="false">
@@ -60,8 +59,13 @@
             <button id="openAll" class="btn">Tout ouvrir</button>
           </div>
         </div>
+      </div></div>
+      <div class="tiles">
+        <button class="tile" data-go="livre" type="button"><span class="ti">📖</span><b>Livre des cartes</b><small>Raretés et chances</small></button>
+        <button class="tile" data-go="duel" type="button"><span class="ti">⚔️</span><b>Combat</b><small>Contre l'IA ou un ami</small></button>
+        <button class="tile" id="tileOdds" type="button"><span class="ti">🎲</span><b>Chances d'obtention</b><small>Contenu d'un booster</small></button>
       </div>
-      <details class="odds"><summary>Contenu d'un booster &amp; taux de drop</summary>
+      <details class="odds" id="oddsBox"><summary>Contenu d'un booster &amp; taux de drop</summary>
         <table><thead><tr><th>Emplacement</th><th>Probabilités</th></tr></thead><tbody id="odds"></tbody></table>
         <p class="muted small">Les cartes sont révélées dans l'ordre réel du paquet : la rare arrive toujours en dernier.
         Les cartes Promo (P) ne sortent pas en booster : chaque victoire en Duel a 15 % de chance d'en donner une.</p>
@@ -116,20 +120,38 @@
 
     <!-- DUEL -->
     <section id="tab-duel" class="tab">
-      <div id="duelSetup">
-        <h2>Duel — règles officielles</h2>
-        <p class="muted">Tu incarnes le CEO d'un club. Gagne en touchant le CEO adverse quand il n'a plus de Point de Victoire, ou si l'adversaire ne peut plus piocher.
-          Club de 40 cartes, Réserve de 10 Essences, 3 cases de Terrain, 4 PV, 5 cartes en main max. Voir les
+      <div id="duelHub">
+        <div class="hub-banner"><span class="hub-title">Combat</span>
+          <div class="hub-cards"><img src="cartes/034.webp" alt=""><img src="cartes/017.webp" alt=""><img src="cartes/024.webp" alt=""></div></div>
+        <div class="hub-tiles">
+          <button class="hub-tile big" data-go="amis" type="button"><span class="ht-ic">👥</span><b>Versus</b><small>Défie un ami en ligne</small></button>
+          <button class="hub-tile big" id="htSolo" type="button"><span class="ht-ic">🤖</span><b>Solo</b><small>Combats contre l'IA</small></button>
+          <button class="hub-tile" id="htDecks" type="button"><span class="ht-ic">🃏</span><b>Decks</b></button>
+          <button class="hub-tile" id="htTuto" type="button"><span class="ht-ic">🎓</span><b>Tuto</b></button>
+        </div>
+      </div>
+      <div id="duelSetup" class="hidden">
+        <button id="soloBack" class="back-btn" type="button">◀ Combat</button>
+        <h2>Combats contre l'IA</h2>
+        <p class="muted">Tu incarnes le CEO d'un club. Gagne en touchant le CEO adverse quand il n'a plus de Point de Victoire, ou si l'adversaire ne peut plus piocher. Voir les
           <a href="https://www.gentlemates.com/tcg/regles-du-jeu.pdf" target="_blank" rel="noopener">règles officielles</a>.</p>
+        <div id="diffList" class="diff-list">
+          <button class="diff-card" data-level="easy" type="button"><div class="dc-back"><img src="img/dos.webp" alt=""><span class="dc-ia">IA</span></div>
+            <div class="dc-body"><span class="dc-tag easy">Facile</span><b>Combat contre l'IA (facile)</b><p>L'IA attaque moins souvent et défend moins bien. Idéal pour apprendre.</p><div class="dc-foot"><span class="dc-pill">🏆 <span data-wins>0</span> victoire(s)</span><span class="dc-rew">🎁 +1 booster</span></div></div></button>
+          <button class="diff-card" data-level="normal" type="button"><div class="dc-back"><img src="img/dos.webp" alt=""><span class="dc-ia">IA</span></div>
+            <div class="dc-body"><span class="dc-tag normal">Normal</span><b>Combat contre l'IA (normal)</b><p>Une IA qui joue correctement : déploie, attaque quand c'est rentable, défend.</p><div class="dc-foot"><span class="dc-pill">🏆 <span data-wins>0</span> victoire(s)</span><span class="dc-rew">🎁 +1 booster</span></div></div></button>
+          <button class="diff-card" data-level="hard" type="button"><div class="dc-back"><img src="img/dos.webp" alt=""><span class="dc-ia">IA</span></div>
+            <div class="dc-body"><span class="dc-tag hard">Difficile</span><b>Combat contre l'IA (difficile)</b><p>L'IA utilise tous ses Coachs, Moments et capacités sans en gaspiller.</p><div class="dc-foot"><span class="dc-pill">🏆 <span data-wins>0</span> victoire(s)</span><span class="dc-rew">🎁 +1 booster</span></div></div></button>
+        </div>
+        <h3 id="deckTitle">Ton deck</h3>
         <div class="filters duel-form">
-          <div class="duel-deck"><span class="muted small">Ton deck</span><div id="dsrcBox"></div></div>
+          <div class="duel-deck"><div id="dsrcBox"></div></div>
           <label id="dcolBox1" class="hidden">Couleur 1 <select id="dcol1"></select></label>
           <label id="dcolBox2" class="hidden">Couleur 2 <select id="dcol2"></select></label>
         </div>
         <p id="dsrcNote" class="muted small"></p>
-        <div class="btn-row"><button id="duelPreview" class="btn">👁 Voir les cartes du deck</button></div>
-        <div class="btn-row"><button id="duelStart" class="btn primary">Lancer le duel</button><button id="duelTuto" class="btn">🎓 Mode tuto : apprendre à jouer</button></div>
-        <p class="muted small">Les decks préconstruits sont <b>prêtés pour la manche</b> : ce sont de bons decks de départ, sans carte Épique ni Légendaire, et leurs cartes ne rejoignent pas ta collection. Victoire = +1 booster (3 par jour max) et 15 % de chance d'obtenir une carte Promo. Les Objets, Coachs et Moments demandent une Essence de leur couleur sur le Terrain.</p>
+        <div class="btn-row"><button id="duelPreview" class="btn">👁 Voir les cartes du deck</button><button id="duelTuto" class="btn">🎓 Mode tuto : apprendre à jouer</button><button id="duelStart" class="hidden" type="button">Lancer</button></div>
+        <p class="muted small">Les decks préconstruits sont <b>prêtés pour la manche</b> : ce sont de bons decks de départ, sans carte Épique ni Légendaire, et leurs cartes ne rejoignent pas ta collection. Victoire = +1 booster (10 par 24 h max) et 15 % de chance d'obtenir une carte Promo. Les Objets, Coachs et Moments demandent une Essence de leur couleur sur le Terrain.</p>
       </div>
       <div id="duelBoard" class="hidden">
         <div class="playmat">
@@ -171,6 +193,24 @@
   <div id="zoom" class="zoom hidden" role="dialog" aria-modal="true"></div>
   <div id="toast" class="toast"></div>
 
+  <nav class="bnav" aria-label="Navigation">
+    <button data-tab="boosters" class="active" aria-label="Accueil"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11l8-7 8 7v8a1 1 0 0 1-1 1h-4v-6h-6v6H5a1 1 0 0 1-1-1z"/></svg><span>Accueil</span></button>
+    <button data-tab="collection" aria-label="Collection"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="3" width="12" height="16" rx="2.2"/><path d="M8 21h11a1 1 0 0 0 1-1V7"/></svg><span>Collection</span></button>
+    <button data-tab="amis" aria-label="Amis"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><circle cx="17.2" cy="9.2" r="2.3"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6M15.2 14.6c3 .1 5.8 1.6 5.8 5"/></svg><span>Amis</span><i id="friBadge" class="badge-n hidden">0</i></button>
+    <button data-tab="duel" aria-label="Combat"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6.5" width="10" height="14" rx="2.2" transform="rotate(-12 8 13.5)"/><rect x="11" y="4" width="10" height="14" rx="2.2" transform="rotate(12 16 11)"/></svg><span>Combat</span></button>
+    <button id="menuBtn" type="button" aria-label="Menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span>Menu</span></button>
+  </nav>
+  <div id="menuVeil" class="menu-veil hidden"></div>
+  <aside id="sideMenu" class="side-menu" aria-hidden="true">
+    <div class="sm-head"><div class="sm-avatar" id="smAvatar">GM</div><div class="sm-name"><b id="smName">Invité</b><small id="smSub">Gentle Mates TCG</small></div></div>
+    <button class="sm-item" data-go="livre"><span class="sm-ic">📖</span>Livre des cartes</button>
+    <button class="sm-item" data-go="profil"><span class="sm-ic">👤</span>Profil et sauvegarde</button>
+    <button class="sm-item" data-go="tuto"><span class="sm-ic">🎓</span>Apprendre à jouer (tuto)</button>
+    <button class="sm-item" id="smSound"><span class="sm-ic">🔊</span><span id="smSoundTxt">Son : activé</span></button>
+    <button class="sm-item hidden" id="smInstall"><span class="sm-ic">📲</span>Installer l'application</button>
+    <button class="sm-item" id="smAccount"><span class="sm-ic">🔑</span><span id="smAccTxt">Se connecter</span></button>
+    <p class="sm-foot">Projet fan non officiel, non affilié à Gentle Mates. Visuels © Gentle Mates.</p>
+  </aside>
   <footer>Projet fan non officiel, non affilié à Gentle Mates. Visuels © Gentle Mates.</footer>
   <script type="module" src="js/app.js"></script>
 </body>

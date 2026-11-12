@@ -28,6 +28,7 @@ export function aiAnswer(g, pi, req) {
         case "weakest": return by((s) => -g.defense(s));
         case "enemyBest": case "strongest": return by((s) => g.defense(s) + Math.max(0, ...C(s).attacks.map((_, i) => g.attackValue(s, i))));
         case "defend": {
+          if (g.aiLevel === "easy" && Math.random() < 0.5) return null;    // facile : défend moins bien
           // défend si l'attaque ne vainc pas le défenseur, ou si c'est une menace importante
           const safe = ss.filter((s) => g.defense(s) > req.attackValue);
           if (safe.length) return by((s) => g.defense(s));
@@ -43,20 +44,21 @@ export function aiAnswer(g, pi, req) {
 
 // Joue un tour complet pour l'IA (après startTurn). `pause` permet à l'interface d'animer.
 export async function aiTurn(g, pi, pause = async () => {}) {
-  const P = g.P(pi);
+  const P = g.P(pi), lv = g.aiLevel || "normal";    // niveaux : easy (moins appliquée), normal, hard (utilise tout, sans gaspiller)
   // Phase d'action
   for (let guard = 0; guard < 25 && g.winner === null; guard++) {
     const playable = P.hand.filter((c) => g.canPlay(pi, c));
     if (!playable.length) break;
     const rank = (c) => { const k = C(c); return k.category === "Joueur" ? 100 + value(k) : k.category === "Objet" ? 60 : k.category === "Coach" ? 40 : 20; };
+    if (lv === "easy" && Math.random() < 0.25) break;                 // facile : passe parfois son tour d'action
     const c = playable.sort((a, b) => rank(b) - rank(a))[0];
     const k = C(c);
     // Ne pas gaspiller un Moment/Coach sans cible ou sans intérêt : on les joue seulement quand on a une main chargée.
-    if ((k.category === "Moment" || k.category === "Coach") && P.hand.length < 3 && g.winner === null && Math.random() < 0.5) break;
+    if ((k.category === "Moment" || k.category === "Coach") && lv !== "hard" && P.hand.length < 3 && g.winner === null && Math.random() < 0.5) break;
     const ok = await g.playFromHand(pi, c); if (!ok) break;
     await pause();
   }
-  for (const s of g.activables(pi)) { if (Math.random() < 0.5) { await g.activate(pi, s); await pause(); } }
+  for (const s of g.activables(pi)) { if (lv === "hard" || Math.random() < (lv === "easy" ? 0.25 : 0.5)) { await g.activate(pi, s); await pause(); } }
   // Phase de combat
   if (g.turn > 1 && g.winner === null) {
     g.beginCombat();
@@ -71,6 +73,8 @@ export async function aiTurn(g, pi, pause = async () => {}) {
         if (!best || score > best.score) best = { s, i, score };
       }
       if (!best || best.score < 0) break;
+      if (lv === "easy" && Math.random() < 0.4) break;                // facile : attaque moins souvent
+      if (lv === "hard" && best.score < 40 && g.P(pi).pv.length > 1) break;   // difficile : n'attaque que si c'est rentable
       await g.attack(pi, best.s, best.i); await pause();
     }
   }

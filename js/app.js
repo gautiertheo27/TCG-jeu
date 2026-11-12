@@ -20,17 +20,41 @@ $("#soundBtn").addEventListener("click", () => { unlock(); setMuted(!isMuted());
 ["pointerdown", "keydown"].forEach((ev) => window.addEventListener(ev, unlock, { once: false, passive: true }));
 
 // ---------- Navigation ----------
-document.querySelectorAll(".tabs button").forEach((b) =>
-  b.addEventListener("click", () => showTab(b.dataset.tab)));
-function showTab(name) {
-  document.querySelectorAll(".tabs button").forEach((b) => b.classList.toggle("active", b.dataset.tab === name));
+const NAV_OF = { boosters: "boosters", collection: "collection", amis: "amis", duel: "duel", livre: "menu", profil: "menu" };   // onglet de la barre mis en avant
+document.querySelectorAll(".bnav [data-tab]").forEach((b) => b.addEventListener("click", () => { closeSideMenu(); showTab(b.dataset.tab, true); }));
+document.querySelectorAll("[data-go]").forEach((b) => b.addEventListener("click", () => { closeSideMenu(); go(b.dataset.go); }));
+function go(name) { if (name === "tuto") { showTab("duel"); duelUI.openTuto(); } else showTab(name); }
+function showTab(name, fromBar = false) {
+  const sel = NAV_OF[name] || name;
+  document.querySelectorAll(".bnav [data-tab]").forEach((b) => b.classList.toggle("active", b.dataset.tab === sel));
+  $("#menuBtn").classList.toggle("active", sel === "menu");
   document.querySelectorAll(".tab").forEach((t) => t.classList.toggle("active", t.id === `tab-${name}`));
   if (name === "collection") renderCollection();
-  if (name === "duel") renderDuelSetup();
+  if (name === "duel") { if (fromBar || !duelUI.isPlaying()) duelUI.showHub(fromBar); }
   if (name === "profil") renderProfile();
   if (name === "livre") renderBook();
   if (name === "amis") friendsUI.refresh();
+  window.scrollTo({ top: 0 });
 }
+// Menu latéral (☰)
+function openSideMenu() { syncMenu(); $("#sideMenu").classList.add("open"); $("#sideMenu").setAttribute("aria-hidden", "false"); $("#menuVeil").classList.remove("hidden"); }
+function closeSideMenu() { $("#sideMenu").classList.remove("open"); $("#sideMenu").setAttribute("aria-hidden", "true"); $("#menuVeil").classList.add("hidden"); }
+$("#menuBtn").addEventListener("click", () => ($("#sideMenu").classList.contains("open") ? closeSideMenu() : openSideMenu()));
+$("#menuVeil").addEventListener("click", closeSideMenu);
+window.addEventListener("keydown", (e) => { if (e.key === "Escape") closeSideMenu(); });
+$("#smSound").addEventListener("click", () => { unlock(); setMuted(!isMuted()); syncSound(); syncMenu(); if (!isMuted()) sfx.tap(); });
+$("#smInstall").addEventListener("click", () => $("#installBtn").click());
+$("#smAccount").addEventListener("click", () => { closeSideMenu(); if (session) { auth.signOut().catch((err) => toast(err.message)); } else showAuth(); });
+function syncMenu() {
+  const prof = S.getProfile();
+  $("#smName").textContent = session ? (prof?.username || "Mon compte") : "Invité";
+  $("#smSub").textContent = session ? "Connecté" : "Gentle Mates TCG";
+  $("#smAvatar").textContent = (session ? (prof?.username || "GM") : "GM").slice(0, 2).toUpperCase();
+  $("#smSoundTxt").textContent = isMuted() ? "Son : coupé" : "Son : activé";
+  $("#smInstall").classList.toggle("hidden", $("#installBtn").classList.contains("hidden"));
+  $("#smAccTxt").textContent = session ? "Se déconnecter" : "Se connecter";
+}
+$("#tileOdds").addEventListener("click", () => { const d = $("#oddsBox"); d.open = !d.open; if (d.open) d.scrollIntoView({ behavior: "smooth", block: "center" }); });
 
 let toastTimer;
 function toast(msg) {
@@ -171,7 +195,7 @@ function renderBook() {
     return `<tr><td><b style="color:${r.color}">${r.symbol} ${r.name}</b> <small class="muted">(${k})</small></td><td>${cs.length}</td><td>${pct(one.atLeastOne)}</td><td>${oneIn(one.atLeastOne)}</td></tr>`;
   }).join("");
   $("#bkSummary").innerHTML = `<table><thead><tr><th>Rareté</th><th>Cartes</th><th>Chance par carte et par booster</th><th>Soit</th></tr></thead><tbody>${rows}</tbody></table>
-    <p class="muted small">Chaque carte d'une même rareté a la même chance. Les cartes <b>Promo</b> peuvent aussi tomber après une victoire en duel (${pct(PROMO_CHANCE_ON_WIN)} par victoire, 3 boosters de récompense par jour maximum).</p>`;
+    <p class="muted small">Chaque carte d'une même rareté a la même chance. Les cartes <b>Promo</b> peuvent aussi tomber après une victoire en duel (${pct(PROMO_CHANCE_ON_WIN)} par victoire, 10 boosters de récompense par 24 h maximum).</p>`;
   const q = $("#bkSearch").value.trim().toLowerCase(), rar = fR2.value, sort = $("#bkSort").value;
   let list = CARDS.filter((c) => (!rar || c.rarity === rar) && (!q || `${S.owned(c.id) ? c.name : ""} ${c.category} ${c.color} ${c.label}`.toLowerCase().includes(q)));   // le nom d'une carte non obtenue reste secret, même par la recherche
   const ch = new Map(list.map((c) => [c.id, boosterChance(c)]));
@@ -216,7 +240,6 @@ document.addEventListener("keydown", (e) => { if (e.key === "Escape") $("#zoom")
 // ---------- Duel (règles officielles) ----------
 const duelUI = initDuel({ S, toast, tick, esc });
 const friendsUI = initFriends({ S, toast, esc, duel: duelUI, modal: (...x) => modal(...x), closeModal: () => closeModal(), showTab: (n) => showTab(n) });
-function renderDuelSetup() { duelUI.showSetup(); }
 
 // ---------- Profil ----------
 function renderProfile() {
@@ -313,7 +336,7 @@ $("#accountBtn").addEventListener("click", () => (session ? (showTab("profil")) 
 async function onSession(sess) {
   if (!sess) {
     session = null; S.leaveRemote(required);                    // compte obligatoire : plus de collection visible tant qu'on n'est pas reconnecté
-    friendsUI.stop(); abortOpening(); $("#zoom").classList.add("hidden"); duelUI.showSetup(); showTab("boosters"); refreshAll();
+    friendsUI.stop(); abortOpening(); $("#zoom").classList.add("hidden"); duelUI.showHub(true); showTab("boosters"); refreshAll();
     if (required) showAuth("signin");
     return;
   }
@@ -352,4 +375,9 @@ $("#installBtn").addEventListener("click", async () => {
 
 // ---------- Démarrage ----------
 tick();
+(function endSplash() {                      // écran de chargement : 100 % puis fondu
+  const sp = $("#splash"); if (!sp) return;
+  clearInterval(window.__splashTimer); $("#spFill").style.width = "100%"; $("#spPct").textContent = "100 %";
+  setTimeout(() => { sp.classList.add("done"); setTimeout(() => sp.remove(), 600); }, Math.max(450, 1300 - performance.now()));
+})();
 setInterval(tick, 1000);

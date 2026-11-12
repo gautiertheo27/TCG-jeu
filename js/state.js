@@ -5,7 +5,7 @@ import { CARDS, BY_ID, BY_RARITY, RARITIES, PACK_SLOTS, PROMO_CHANCE_ON_WIN, SET
 export let BOOSTER_INTERVAL_MS = 10 * 60 * 1000;   // 1 booster toutes les 10 minutes
 export let MAX_STOCK = 10;                          // cumulable jusqu'à 10 boosters en stock (au-delà, le décompte s'arrête)
 export const START_STOCK = 2;
-export const DUEL_REWARDS_PER_DAY = 3;
+export const DUEL_REWARDS_PER_DAY = 10;   // par fenêtre glissante de 24 h
 
 const KEY = "gmtcg.save.v3"; // v3 : vraies cartes du TCG Gentle Mates
 
@@ -16,7 +16,7 @@ function fresh() {
     lastCredit: Date.now(),
     collection: {},
     stats: { opened: 0, duelsWon: 0, duelsPlayed: 0 },
-    duelRewards: { day: today(), count: 0 },
+    duelRewards: { start: 0, count: 0 },
   };
 }
 
@@ -40,7 +40,7 @@ function fromServer(r) {
   if (r.max_stock) MAX_STOCK = r.max_stock;
   profile = r.profile || null;
   state = { version: 3, stock: r.stock, lastCredit: Date.parse(r.last_credit), collection: r.collection || {},
-    stats: r.stats, duelRewards: { day: r.duelRewards?.day, count: r.duelRewards?.count || 0 }, imported: !!r.imported };
+    stats: r.stats, duelRewards: { start: r.duelRewards?.start ? +new Date(r.duelRewards.start) : 0, count: r.duelRewards?.count || 0 }, imported: !!r.imported };
 }
 export function enterRemote(api, serverState) { mode = "remote"; remoteApi = api; fromServer(serverState); }
 export function applyServerState(serverState) { fromServer(serverState); }
@@ -48,7 +48,7 @@ export function applyServerState(serverState) { fromServer(serverState); }
 // l'état affiché est vide, et la progression d'invité enregistrée sur l'appareil n'est pas montrée.
 export function leaveRemote(locked = false) {
   remoteApi = null; profile = null; clockOffset = 0; BOOSTER_INTERVAL_MS = 10 * 60 * 1000; MAX_STOCK = 10;
-  if (locked) { mode = "locked"; state = { version: 3, stock: 0, lastCredit: Date.now(), collection: {}, stats: { opened: 0, duelsWon: 0, duelsPlayed: 0 }, duelRewards: { day: today(), count: 0 } }; }
+  if (locked) { mode = "locked"; state = { version: 3, stock: 0, lastCredit: Date.now(), collection: {}, stats: { opened: 0, duelsWon: 0, duelsPlayed: 0 }, duelRewards: { start: 0, count: 0 } }; }
   else { mode = "local"; state = localState; }
 }
 export const isLocked = () => mode === "locked";
@@ -160,7 +160,7 @@ export async function recordDuel(won) {
   let rewarded = false, promo = null;
   if (won) {
     state.stats.duelsWon += 1;
-    if (state.duelRewards.day !== today()) state.duelRewards = { day: today(), count: 0 };
+    if (!state.duelRewards.start || Date.now() - state.duelRewards.start >= 86400000) state.duelRewards = { start: Date.now(), count: 0 };
     if (state.duelRewards.count < DUEL_REWARDS_PER_DAY) {
       state.duelRewards.count += 1;
       state.stock += 1;

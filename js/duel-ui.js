@@ -58,10 +58,27 @@ export function initDuel({ S, toast, tick, esc }) {
     wireDeckPicker(modal, () => deck);
   }
 
-  function showSetup() {
-    dropAsk(); renderDeckPicker();
-    setup.classList.remove("hidden"); board.classList.add("hidden"); g = null; updateNote();
+  // ---------- hub Combat > Solo (niveaux) ----------
+  const hub = $("#duelHub"), LEVELS = ["easy", "normal", "hard"];
+  let level = "normal";
+  const winsKey = (l) => "gm_wins_" + l;
+  const getWins = (l) => { try { return +localStorage.getItem(winsKey(l)) || 0; } catch { return 0; } };
+  const addWin = (l) => { try { localStorage.setItem(winsKey(l), getWins(l) + 1); } catch { /* sans stockage */ } };
+  function paintWins() { document.querySelectorAll("#diffList [data-level]").forEach((b) => { const w = getWins(b.dataset.level); const el = b.querySelector("[data-wins]"); if (el) el.textContent = w; }); }
+  function showHub() {                                   // page d'accueil de l'onglet Combat (sans toucher à une partie en cours)
+    if (g && g.winner === null && !board.classList.contains("hidden")) return;
+    dropAsk(); g = null; board.classList.add("hidden"); setup.classList.add("hidden"); hub.classList.remove("hidden");
   }
+  function showSetup(toDecks) {                          // écran Solo : niveaux + deck
+    dropAsk(); renderDeckPicker(); paintWins();
+    hub.classList.add("hidden"); setup.classList.remove("hidden"); board.classList.add("hidden"); g = null; updateNote();
+    if (toDecks === true) $("#deckTitle").scrollIntoView({ behavior: "smooth" }); else window.scrollTo({ top: 0 });
+  }
+  $("#htSolo").addEventListener("click", () => showSetup());
+  $("#htDecks").addEventListener("click", () => showSetup(true));
+  $("#htTuto").addEventListener("click", () => openTuto());
+  $("#soloBack").addEventListener("click", showHub);
+  document.querySelectorAll("#diffList [data-level]").forEach((b) => b.addEventListener("click", () => { level = b.dataset.level; tuto = false; start(); }));
 
   async function start() {
     dropAsk();
@@ -77,9 +94,10 @@ export function initDuel({ S, toast, tick, esc }) {
       ask: (game, pi, req) => (pi === 0 ? humanAsk(req) : aiAnswer(game, pi, req)),
       onUpdate: render, log: addLog, fx: makeFx(() => SEAT),
     });
+    g.aiLevel = tuto ? "easy" : level;
     window.__gmGame = g;
     addLog(custom ? "Tu joues avec les cartes de ta collection." : `Tu joues avec « ${mine.name} » (cartes prêtées pour la manche).`);
-    setup.classList.add("hidden"); board.classList.remove("hidden"); $("#duelEnd").classList.add("hidden");
+    setup.classList.add("hidden"); hub.classList.add("hidden"); board.classList.remove("hidden"); $("#duelEnd").classList.add("hidden");
     render(g); await loop();
   }
 
@@ -102,6 +120,7 @@ export function initDuel({ S, toast, tick, esc }) {
     const won = g.winner === SEAT; const wasOnline = !!sync;
     clearTimeout(oppLeftTimer); if (sync) { sync.close(); sync = null; }
     $("#btnForfeit").classList.add("hidden");
+    if (won && !wasOnline && !tuto) addWin(level);
     const { rewarded, promo } = tuto ? { rewarded: false, promo: null } : await S.recordDuel(won);
     if (wasOnline) onlineEnd?.();
     $("#duelEnd").classList.remove("hidden");
@@ -119,7 +138,7 @@ export function initDuel({ S, toast, tick, esc }) {
     sync = new Sync({ seat, net, humanAsk, onForfeit: () => { if (g && g.winner === null) { g.lose(OPP, "abandon de l'adversaire"); render(); sync?.close(); } } });
     sync.attach(g); window.__gmGame = g; window.__gmSync = sync; window.__gmSeat = seat;
     addLog(`Duel contre ${names[OPP]}. Tu joues ${seat === 0 ? "en premier siège" : "en second siège"}.`);
-    setup.classList.add("hidden"); board.classList.remove("hidden"); $("#duelEnd").classList.add("hidden"); $("#btnForfeit").classList.remove("hidden");
+    setup.classList.add("hidden"); hub.classList.add("hidden"); board.classList.remove("hidden"); $("#duelEnd").classList.add("hidden"); $("#btnForfeit").classList.remove("hidden");
     render(); await pvpLoop(); return sync;
   }
   async function pvpLoop() {
@@ -393,5 +412,5 @@ export function initDuel({ S, toast, tick, esc }) {
     if (deck.club.some((id) => !BY_ID[id]) || deck.reserve.some((id) => !BY_ID[id])) errs.push("Carte inconnue dans le deck.");
     return errs;
   }
-  return { showSetup, startOnline, opponentLeft, deckOptions, deckFor, deckProblems, deckPickerHTML: (id) => deckPickerHTML(id, deckOptions(), deckFor, "preset:" + PRESETS[0].id), wireDeckPicker: (root) => wireDeckPicker(root, deckFor), isPlaying: () => !!g && g.winner === null && !board.classList.contains("hidden") };
+  return { showSetup, showHub, openTuto, startOnline, opponentLeft, deckOptions, deckFor, deckProblems, deckPickerHTML: (id) => deckPickerHTML(id, deckOptions(), deckFor, "preset:" + PRESETS[0].id), wireDeckPicker: (root) => wireDeckPicker(root, deckFor), isPlaying: () => !!g && g.winner === null && !board.classList.contains("hidden") };
 }
