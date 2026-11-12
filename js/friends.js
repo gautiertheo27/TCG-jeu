@@ -55,11 +55,12 @@ export function initFriends({ S, toast, esc, duel, modal, closeModal, showTab })
   $("#friSearch").addEventListener("keydown", (e) => { if (e.key === "Enter") search(); });
 
   // ---------- défi : celui qui invite ----------
-  function deckSelect(id) { return `<select id="${id}">${duel.deckOptions().map((o) => `<option value="${o.value}">${esc(o.label)}</option>`).join("")}</select>`; }
+  const deckSelect = (id) => duel.deckPickerHTML(id);
   function challenge(toId, toName) {
     if (busy || pending) return toast("Tu es déjà en train d'inviter ou de jouer.");
-    modal(`<h3>Défier ${esc(toName)}</h3><p class="muted small">Choisis ton deck. L'invitation expire au bout de 30 secondes.</p><label class="muted small">Ton deck ${deckSelect("chDeck")}</label>
+    modal(`<h3>Défier ${esc(toName)}</h3><p class="muted small">Choisis ton deck. L'invitation expire au bout de 30 secondes.</p><div class="muted small">Ton deck</div>${deckSelect("chDeck")}
       <div class="btn-row"><button class="btn primary" id="chGo">Envoyer le défi</button><button class="btn" data-close>Annuler</button></div>`, (m) => {
+      duel.wireDeckPicker(m);
       m.querySelector("#chGo").addEventListener("click", () => {
         const deck = duel.deckFor(m.querySelector("#chDeck").value), errs = duel.deckProblems(deck);
         if (errs.length) return toast(errs[0] + (m.querySelector("#chDeck").value === "collection" ? " Choisis un deck prêté ou ouvre des boosters." : ""));
@@ -94,8 +95,9 @@ export function initFriends({ S, toast, esc, duel, modal, closeModal, showTab })
   function onInvite(inv) {
     if (busy || incoming || !me || duel.isPlaying()) return lobby.reply(inv.from, inv.matchId, false);
     incoming = inv; sfxPing();
-    modal(`<h3>⚔ ${esc(inv.fromName)} te défie !</h3><p class="muted small">Choisis ton deck pour accepter.</p><label class="muted small">Ton deck ${deckSelect("inDeck")}</label>
+    modal(`<h3>⚔ ${esc(inv.fromName)} te défie !</h3><p class="muted small">Choisis ton deck pour accepter.</p><div class="muted small">Ton deck</div>${deckSelect("inDeck")}
       <div class="btn-row"><button class="btn primary" id="inYes">Accepter</button><button class="btn" id="inNo">Refuser</button></div>`, (m) => {
+      duel.wireDeckPicker(m);
       m.querySelector("#inNo").addEventListener("click", () => { lobby.reply(inv.from, inv.matchId, false); incoming = null; closeModal(); });
       m.querySelector("#inYes").addEventListener("click", () => accept(inv, m.querySelector("#inDeck").value));
     });

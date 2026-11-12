@@ -6,6 +6,7 @@ import { autoDeck, validateDeck, PRESETS, buildPreset } from "./engine/deck.js";
 import { cardHTML } from "./cardview.js";
 import { Sync } from "./pvp.js";
 import { makeFx } from "./duel-fx.js";
+import { deckViewHTML, deckPickerHTML, wireDeckPicker } from "./deckview.js";
 import { TUTO_PAGES, tutoHint } from "./tuto.js";
 
 const $ = (s, r = document) => r.querySelector(s);
@@ -22,13 +23,19 @@ export function initDuel({ S, toast, tick, esc }) {
   // ---------- écran de préparation ----------
   for (const sel of ["#dcol1", "#dcol2"]) ALL_COLORS.forEach((c) => $(sel).insertAdjacentHTML("beforeend", `<option>${c}</option>`));
   $("#dcol1").value = "Rose"; $("#dcol2").value = "Mauve";
-  $("#dsrc").innerHTML = PRESETS.map((p) => `<option value="preset:${p.id}">Prêté · ${esc(p.name)}</option>`).join("") + '<option value="collection">Mon deck (ma collection)</option>';
-  $("#dsrc").addEventListener("change", updateNote);
+  // choix du deck : tuiles visuelles (le champ caché #dsrc garde la valeur, comme l'ancien menu)
+  function renderDeckPicker() {
+    const cur = $("#dsrc")?.value || "preset:" + PRESETS[0].id;
+    $("#dsrcBox").innerHTML = deckPickerHTML("dsrc", deckOptions(), deckFor, cur);
+    wireDeckPicker($("#dsrcBox"), deckFor, () => updateNote());
+    $("#dsrc").addEventListener("change", updateNote); updateNote();
+  }
   $("#duelStart").addEventListener("click", () => { tuto = false; start(); });
   $("#duelTuto").addEventListener("click", openTuto);
   $("#tutoQuit").addEventListener("click", () => { tuto = false; $("#tutoBar").classList.add("hidden"); dropAsk(); showSetup(); });
   $("#duelAgain").addEventListener("click", showSetup);
   $("#duelPreview").addEventListener("click", previewDeck);
+  $("#dcol1").addEventListener("change", renderDeckPicker); $("#dcol2").addEventListener("change", renderDeckPicker);
 
   function chosenDeck() {
     const v = $("#dsrc").value;
@@ -46,15 +53,12 @@ export function initDuel({ S, toast, tick, esc }) {
   }
   function previewDeck() {
     const { deck } = chosenDeck();
-    const count = {}; for (const id of [...deck.club, ...deck.reserve]) count[id] = (count[id] || 0) + 1;
-    const ids = Object.keys(count).sort((a, b) => BY_ID[a].n - BY_ID[b].n);
-    openModal(`<h3>${esc(deck.name || "Ton deck")} · ${deck.club.length} cartes + ${deck.reserve.length} Essences</h3>
-      <div class="pick-row">${ids.map((id) => `<div class="pick">${cardHTML(BY_ID[id])}<small>×${count[id]}</small></div>`).join("")}</div>
-      <div class="btn-col"><button class="btn" data-close>Fermer</button></div>`);
+    openModal(`${deckViewHTML(deck)}<div class="btn-col"><button class="btn" data-close>Fermer</button></div>`);
+    wireDeckPicker(modal, () => deck);
   }
 
   function showSetup() {
-    dropAsk();
+    dropAsk(); renderDeckPicker();
     setup.classList.remove("hidden"); board.classList.add("hidden"); g = null; updateNote();
   }
 
@@ -336,15 +340,15 @@ export function initDuel({ S, toast, tick, esc }) {
     });
   }
 
-  updateNote();
+  renderDeckPicker();
   // Decks pour les duels en ligne (mêmes règles que contre l'IA)
-  const deckOptions = () => [...PRESETS.map((p) => ({ value: "preset:" + p.id, label: "Prêté · " + p.name })), { value: "collection", label: "Mon deck (ma collection)" }];
-  const deckFor = (v) => { const { deck } = (() => { if (v === "collection") return chosenDeckFrom("collection"); return { deck: buildPreset(v.slice(7)) }; })(); return deck; };
+  function deckOptions() { return [...PRESETS.map((p) => ({ value: "preset:" + p.id, label: p.name, blurb: p.blurb + " (cartes prêtées)" })), { value: "collection", label: "Mon deck (ma collection)", blurb: "Construit automatiquement avec tes cartes, dans les 2 couleurs choisies ci-dessous." }]; }
+  function deckFor(v) { return v === "collection" ? chosenDeckFrom("collection").deck : buildPreset(v.slice(7)); }
   function chosenDeckFrom(v) { const colors = [...new Set([$("#dcol1").value, $("#dcol2").value])]; return { deck: autoDeck(colors, S.get().collection) }; }
   function deckProblems(deck) {
     const errs = validateDeck(deck).filter((e) => !e.startsWith("Conseil"));
     if (deck.club.some((id) => !BY_ID[id]) || deck.reserve.some((id) => !BY_ID[id])) errs.push("Carte inconnue dans le deck.");
     return errs;
   }
-  return { showSetup, startOnline, opponentLeft, deckOptions, deckFor, deckProblems, isPlaying: () => !!g && g.winner === null && !board.classList.contains("hidden") };
+  return { showSetup, startOnline, opponentLeft, deckOptions, deckFor, deckProblems, deckPickerHTML: (id) => deckPickerHTML(id, deckOptions(), deckFor, "preset:" + PRESETS[0].id), wireDeckPicker: (root) => wireDeckPicker(root, deckFor), isPlaying: () => !!g && g.winner === null && !board.classList.contains("hidden") };
 }

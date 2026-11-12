@@ -458,3 +458,25 @@ body.no-scroll { overflow: hidden; }
 .tuto-glow { animation: tutoGlow 1s ease-in-out infinite; box-shadow: 0 0 0 3px #ffd36e, 0 0 18px 4px #ffd36eaa !important; border-radius: 10px; }
 @keyframes tutoGlow { 50% { box-shadow: 0 0 0 3px #fff3c4, 0 0 26px 8px #ffd36ecc !important; } }
 @media (min-width: 1100px) { #duelBoard .tuto-bar { grid-column: 2; max-width: none; margin: 0; } }
+
+/* ---------- Choix et aperçu des decks ---------- */
+.duel-deck { width: 100%; } .deckpick { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px; margin: 6px 0 10px; text-align: left; }
+.dtile { background: #1a1626; border: 2px solid #2d2745; border-radius: 14px; padding: 10px 12px; cursor: pointer; transition: border-color .15s, transform .15s, background .15s; }
+.dtile:hover { border-color: #6b4a8f; } .dtile.on { border-color: #ff4fa3; background: linear-gradient(160deg, #2a1634, #1d1830); box-shadow: 0 0 0 2px #ff4fa333, 0 8px 22px #0006; }
+.dtile-top { display: flex; align-items: center; gap: 8px; justify-content: space-between; } .dtile-top b { font-size: 1rem; }
+.dtile-blurb { margin: 4px 0 6px; font-size: .82rem; color: #b8b3cc; line-height: 1.35; } .dtile-warn { color: #ffb36b; font-size: .78rem; margin: 4px 0; }
+.dtile-thumbs { display: flex; gap: 4px; margin: 6px 0; } .dv-thumb { width: 46px; display: block; } .dv-thumb .card { border-radius: 4px; }
+.dv-dot { display: inline-block; width: 12px; height: 12px; border-radius: 50%; box-shadow: 0 0 0 2px #0006; vertical-align: -1px; margin-left: 3px; }
+.dv-chips { display: flex; flex-wrap: wrap; gap: 5px; margin: 6px 0; } .dv-chip { font-size: .72rem; padding: 2px 8px; border-radius: 999px; background: #241e38; border: 1px solid #3a3158; }
+.dv-chip.alt { background: #1d2a3a; border-color: #2f4a66; }
+.dtile-view { margin-top: 8px; padding-top: 8px; border-top: 1px dashed #3a3158; cursor: default; } .dtile-view.hidden { display: none; }
+.dv-top { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap; } .dv-name { font-size: 1.25rem; font-family: "Bebas Neue", sans-serif; letter-spacing: .03em; } .dv-sub { color: #b8b3cc; font-size: .85rem; }
+.dv-curve { display: flex; gap: 6px; align-items: flex-end; height: 74px; } .dv-curve div { display: flex; flex-direction: column; align-items: center; gap: 2px; justify-content: flex-end; font-size: .7rem; }
+.dv-curve span { width: 16px; background: linear-gradient(#ff79b8, #c22f86); border-radius: 4px 4px 0 0; } .dv-curve small { color: #8f89a8; }
+.dv-h { margin: 14px 0 6px; font-size: .95rem; border-bottom: 1px solid #2d2745; padding-bottom: 3px; } .dv-h small { color: #8f89a8; margin-left: 4px; }
+.dv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 8px; } .dv-card { position: relative; cursor: zoom-in; transition: transform .12s; } .dv-card:hover { transform: translateY(-3px) scale(1.03); }
+.dv-x { position: absolute; right: 3px; bottom: 3px; background: #000c; color: #fff; font-weight: 800; font-size: .72rem; padding: 1px 6px; border-radius: 999px; border: 1px solid #ff79b8; }
+.dv-zoom { position: fixed; inset: 0; z-index: 99999; background: #000d; display: grid; place-content: center; justify-items: center; gap: 8px; cursor: zoom-out; } .dv-zoomcard { width: min(360px, 80vw, 60vh * .716); } .dv-zoom p { color: #fff; margin: 0; }
+#duelModal .modal-box:has(.dv) { width: min(960px, 96vw); max-height: 92vh; overflow: auto; }
+.dtile.open { grid-column: 1 / -1; } .dtile.open .dv-grid { grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); }
+@media (min-width: 1100px) { .dtile.open .dv-grid { grid-template-columns: repeat(auto-fill, minmax(128px, 1fr)); } }
