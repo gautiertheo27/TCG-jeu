@@ -40,7 +40,7 @@ const rpc = async (fn, args) => { const { data, error } = await sb.rpc(fn, args)
 export const api = {
   getState: () => rpc("get_state"),
   openBooster: () => rpc("open_booster"),
-  recordDuel: (won) => rpc("record_duel", { won }),
+  recordDuel: (won, lvl) => rpc("record_duel", { won, lvl }),
   importLocal: (save) => rpc("import_local", { save }),
   searchPlayers: (q) => rpc("search_players", { q }),
   friendsList: () => rpc("friends_list"),

@@ -5,7 +5,8 @@ import { CARDS, BY_ID, BY_RARITY, RARITIES, PACK_SLOTS, PROMO_CHANCE_ON_WIN, SET
 export let BOOSTER_INTERVAL_MS = 10 * 60 * 1000;   // 1 booster toutes les 10 minutes
 export let MAX_STOCK = 10;                          // cumulable jusqu'à 10 boosters en stock (au-delà, le décompte s'arrête)
 export const START_STOCK = 2;
-export const DUEL_REWARDS_PER_DAY = 10;   // par fenêtre glissante de 24 h
+export const DUEL_REWARD = { easy: 1, normal: 2, hard: 3, versus: 2 };   // boosters gagnés par victoire selon le type de duel
+export const DUEL_REWARDS_PER_TYPE = 5;    // duels récompensés par type et par fenêtre glissante de 24 h
 
 const KEY = "gmtcg.save.v3"; // v3 : vraies cartes du TCG Gentle Mates
 
@@ -16,7 +17,7 @@ function fresh() {
     lastCredit: Date.now(),
     collection: {},
     stats: { opened: 0, duelsWon: 0, duelsPlayed: 0 },
-    duelRewards: { start: 0, count: 0 },
+    duelRewards: {},
   };
 }
 
@@ -40,7 +41,7 @@ function fromServer(r) {
   if (r.max_stock) MAX_STOCK = r.max_stock;
   profile = r.profile || null;
   state = { version: 3, stock: r.stock, lastCredit: Date.parse(r.last_credit), collection: r.collection || {},
-    stats: r.stats, duelRewards: { start: r.duelRewards?.start ? +new Date(r.duelRewards.start) : 0, count: r.duelRewards?.count || 0 }, imported: !!r.imported };
+    stats: r.stats, duelRewards: Object.fromEntries(Object.entries(r.duelRewards || {}).map(([k, v]) => [k, { start: +new Date(v?.start) || 0, n: v?.n || 0 }])), imported: !!r.imported };
 }
 export function enterRemote(api, serverState) { mode = "remote"; remoteApi = api; fromServer(serverState); }
 export function applyServerState(serverState) { fromServer(serverState); }
@@ -48,7 +49,7 @@ export function applyServerState(serverState) { fromServer(serverState); }
 // l'état affiché est vide, et la progression d'invité enregistrée sur l'appareil n'est pas montrée.
 export function leaveRemote(locked = false) {
   remoteApi = null; profile = null; clockOffset = 0; BOOSTER_INTERVAL_MS = 10 * 60 * 1000; MAX_STOCK = 10;
-  if (locked) { mode = "locked"; state = { version: 3, stock: 0, lastCredit: Date.now(), collection: {}, stats: { opened: 0, duelsWon: 0, duelsPlayed: 0 }, duelRewards: { start: 0, count: 0 } }; }
+  if (locked) { mode = "locked"; state = { version: 3, stock: 0, lastCredit: Date.now(), collection: {}, stats: { opened: 0, duelsWon: 0, duelsPlayed: 0 }, duelRewards: {} }; }
   else { mode = "local"; state = localState; }
 }
 export const isLocked = () => mode === "locked";
@@ -148,31 +149,29 @@ function addCard(id, holo = false) {
   return isNew;
 }
 
-export async function recordDuel(won) {
-  if (mode === "locked") return { rewarded: false, promo: null };
+export async function recordDuel(won, lvl = "normal") {
+  if (!(lvl in DUEL_REWARD)) lvl = "normal";
+  if (mode === "locked") return { rewarded: false, amount: 0, promo: null };
   if (mode === "remote") {
     try {
-      const r = await remoteApi.recordDuel(won); fromServer(r.state);
-      return { rewarded: !!r.rewarded, promo: r.promo ? BY_ID[r.promo] : null };
-    } catch (e) { console.error(e); return { rewarded: false, promo: null }; }
+      const r = await remoteApi.recordDuel(won, lvl); fromServer(r.state);
+      return { rewarded: !!r.rewarded, amount: r.amount || 0, promo: r.promo ? BY_ID[r.promo] : null };
+    } catch (e) { console.error(e); return { rewarded: false, amount: 0, promo: null }; }
   }
   state.stats.duelsPlayed += 1;
-  let rewarded = false, promo = null;
+  let rewarded = false, amount = 0, promo = null;
   if (won) {
     state.stats.duelsWon += 1;
-    if (!state.duelRewards.start || Date.now() - state.duelRewards.start >= 86400000) state.duelRewards = { start: Date.now(), count: 0 };
-    if (state.duelRewards.count < DUEL_REWARDS_PER_DAY) {
-      state.duelRewards.count += 1;
-      state.stock += 1;
-      rewarded = true;
-    }
+    let e = state.duelRewards[lvl];
+    if (!e || !e.start || Date.now() - e.start >= 86400000) e = state.duelRewards[lvl] = { start: Date.now(), n: 0 };
+    if (e.n < DUEL_REWARDS_PER_TYPE) { e.n += 1; amount = DUEL_REWARD[lvl]; state.stock += amount; rewarded = true; }
     if (Math.random() < PROMO_CHANCE_ON_WIN) {
       promo = pick(BY_RARITY.P);
       addCard(promo.id);
     }
   }
   save();
-  return { rewarded, promo };
+  return { rewarded, amount, promo };
 }
 
 export function exportSave() {

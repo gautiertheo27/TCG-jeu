@@ -195,7 +195,7 @@ function renderBook() {
     return `<tr><td><b style="color:${r.color}">${r.symbol} ${r.name}</b> <small class="muted">(${k})</small></td><td>${cs.length}</td><td>${pct(one.atLeastOne)}</td><td>${oneIn(one.atLeastOne)}</td></tr>`;
   }).join("");
   $("#bkSummary").innerHTML = `<table><thead><tr><th>Rareté</th><th>Cartes</th><th>Chance par carte et par booster</th><th>Soit</th></tr></thead><tbody>${rows}</tbody></table>
-    <p class="muted small">Chaque carte d'une même rareté a la même chance. Les cartes <b>Promo</b> peuvent aussi tomber après une victoire en duel (${pct(PROMO_CHANCE_ON_WIN)} par victoire, 10 boosters de récompense par 24 h maximum).</p>`;
+    <p class="muted small">Chaque carte d'une même rareté a la même chance. Les cartes <b>Promo</b> peuvent aussi tomber après une victoire en duel (${pct(PROMO_CHANCE_ON_WIN)} par victoire, 5 duels récompensés par type et par 24 h maximum).</p>`;
   const q = $("#bkSearch").value.trim().toLowerCase(), rar = fR2.value, sort = $("#bkSort").value;
   let list = CARDS.filter((c) => (!rar || c.rarity === rar) && (!q || `${S.owned(c.id) ? c.name : ""} ${c.category} ${c.color} ${c.label}`.toLowerCase().includes(q)));   // le nom d'une carte non obtenue reste secret, même par la recherche
   const ch = new Map(list.map((c) => [c.id, boosterChance(c)]));

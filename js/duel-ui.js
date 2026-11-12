@@ -121,11 +121,11 @@ export function initDuel({ S, toast, tick, esc }) {
     clearTimeout(oppLeftTimer); if (sync) { sync.close(); sync = null; }
     $("#btnForfeit").classList.add("hidden");
     if (won && !wasOnline && !tuto) addWin(level);
-    const { rewarded, promo } = tuto ? { rewarded: false, promo: null } : await S.recordDuel(won);
+    const { rewarded, amount, promo } = tuto ? { rewarded: false, amount: 0, promo: null } : await S.recordDuel(won, wasOnline ? "versus" : level);
     if (wasOnline) onlineEnd?.();
     $("#duelEnd").classList.remove("hidden");
     $("#duelEndMsg").innerHTML = won
-      ? `🏆 Victoire${wasOnline ? " contre " + esc(g.P(OPP).name) : ""} !${tuto ? " Tuto réussi : tu connais les bases, lance un vrai duel !" : rewarded ? " <b>+1 booster</b>" : " (récompenses du jour épuisées)"}${promo ? `<br>🎉 Carte promo obtenue : ${esc(promo.name)} (${promo.label})` : ""}`
+      ? `🏆 Victoire${wasOnline ? " contre " + esc(g.P(OPP).name) : ""} !${tuto ? " Tuto réussi : tu connais les bases, lance un vrai duel !" : rewarded ? ` <b>+${amount} booster${amount > 1 ? "s" : ""}</b>` : " (limite de 5 récompenses par 24 h atteinte pour ce type de duel)"}${promo ? `<br>🎉 Carte promo obtenue : ${esc(promo.name)} (${promo.label})` : ""}`
       : tuto ? "Tuto terminé (pas de récompense). Relance-le ou joue un vrai duel !" : "Défaite… retente ta chance !";
     tick(); tuto = false; render(g); $("#tutoBar").classList.add("hidden");
   }
