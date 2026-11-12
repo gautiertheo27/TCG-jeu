@@ -46,7 +46,7 @@ function slotTables() {
   const n = (r) => BY_RARITY[r]?.length || 0, round = (x) => Math.round(x * 10000) / 10000, f = 1 - TEN_C - TEN_PC;
   // Pour viser « a » par carte et par booster avec la carte 9 (proba x·n) et la carte 10 (proba f·x·n) : f·x² - (1+f)·x + a = 0
   const solve = (r, a) => n(r) * ((1 + f) - Math.sqrt((1 + f) * (1 + f) - 4 * f * a)) / (2 * f);
-  const p9 = { P: round(solve("P", 1 / 300)), L: round(solve("L", LEGENDARY_PER_BOOSTER / Math.max(n("L"), 1))), E: round(solve("E", 1 / 60)) };
+  const p9 = { P: round(solve("P", 1 / 300)), L: round(solve("L", LEGENDARY_PER_BOOSTER / Math.max(n("L"), 1))), E: round(solve("E", 1 / 56)) };
   p9.R = round(1 - p9.P - p9.L - p9.E);
   const slot9 = [["P", p9.P], ["L", p9.L], ["E", p9.E], ["R", p9.R]].filter(([r]) => n(r) > 0);
   const slot10 = [["C", TEN_C], ["PC", TEN_PC], ...slot9.map(([r, p]) => [r, round(p * f)])];
