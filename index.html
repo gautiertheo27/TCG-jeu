@@ -68,7 +68,7 @@
       <details class="odds" id="oddsBox"><summary>Contenu d'un booster &amp; taux de drop</summary>
         <table><thead><tr><th>Emplacement</th><th>Probabilités</th></tr></thead><tbody id="odds"></tbody></table>
         <p class="muted small">Les cartes sont révélées dans l'ordre réel du paquet : la rare arrive toujours en dernier.
-        Les cartes Promo (P) ne sortent pas en booster : chaque victoire en Duel a 15 % de chance d'en donner une.</p>
+        Les cartes Promo (P) ne sortent pas en booster : chaque victoire en Duel a 10 % de chance d'en donner une.</p>
       </details>
     </section>
 
@@ -164,9 +164,10 @@
         <div class="bd-controls"><span class="bd-actions"><button id="btnHelp" class="btn small" type="button" title="Afficher ou masquer les bulles d'explication">💡 Bulles d'aide</button><button id="btnForfeit" class="btn danger hidden">🏳 Abandonner</button><button id="btnCombat" class="btn hidden">⚔ Phase de combat</button><button id="btnEnd" class="btn primary hidden">Passer le tour ▶</button></span></div>
         <div id="tutoBar" class="tuto-bar hidden"><div class="tuto-head"><b>🎓 Tuto</b><button id="tutoQuit" class="btn small">Quitter</button></div><p id="tutoText"></p></div>
         <div class="bd-hand" id="bdHand"></div>
-        <div id="duelEnd" class="duel-end hidden"><p id="duelEndMsg"></p><button id="duelAgain" class="btn primary">Rejouer</button></div>
+        <div id="duelEnd" class="duel-end hidden"><p id="duelEndMsg"></p><button id="duelAgain" class="btn primary">Rejouer</button><button id="duelHubBtn" class="btn">Menu Combat</button></div>
         <details class="bd-logbox" open><summary>Journal</summary><div id="bdLog" class="bd-log"></div></details>
       </div>
+      <div id="duelPrep" class="prep hidden"></div>
       <div id="duelModal" class="modal hidden"></div>
     </section>
 

@@ -1,5 +1,6 @@
 // Animations de combat du duel : élan de l'attaquant, impact, K.O., PV touché. Attendues par le moteur (game.fx), jamais bloquantes.
 import { sfx } from "./sound.js";
+import { cardHTML, esc } from "./cardview.js";
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const reduced = () => (typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches) || /[?&]nofx/.test(location.search) || document.hidden;
 const board = () => document.querySelector("#duelBoard");
@@ -20,9 +21,28 @@ function burst(x, y, color, n = 12, dist = 70) {
 const ring = (x, y, color) => { const d = document.createElement("div"); d.className = "fx-ring"; d.style.cssText = `left:${x}px;top:${y}px;border-color:${color}`; document.body.appendChild(d); setTimeout(() => d.remove(), 650); };
 const shake = (el, px = 8, ms = 380) => el?.animate?.([{ transform: "none" }, { transform: `translate(${-px}px,${px / 2}px)` }, { transform: `translate(${px}px,${-px / 2}px)` }, { transform: `translate(${-px / 2}px,0)` }, { transform: "none" }], { duration: ms, easing: "ease-in-out" });
 
+// ---------- écrans d'ambiance : intro, pièce, bannière de tour (cliquer pour passer) ----------
+function overlay(cls, html, ms) {
+  return new Promise((res) => {
+    const d = document.createElement("div"); d.className = "fxo " + cls; d.innerHTML = html; document.body.appendChild(d);
+    requestAnimationFrame(() => d.classList.add("in"));
+    let done = false; const end = () => { if (done) return; done = true; d.classList.remove("in"); d.classList.add("out"); setTimeout(() => { d.remove(); res(); }, 260); };
+    d.addEventListener("click", end); setTimeout(end, ms);
+  });
+}
+export const turnBanner = (mine, n) => (reduced() ? Promise.resolve() : overlay("fxo-banner", `<div class="fxo-band"><b>${mine ? "À toi !" : "Tour de l'adversaire"}</b><span>Tour actuel : ${n}</span></div>`, 850));
+export const introScreen = (opp, me) => (reduced() ? Promise.resolve() : overlay("fxo-intro", `<div class="b1"></div><div class="b2"></div><div class="vs"><div class="av">IA</div><small>Adversaire</small><b>${esc(opp)}</b><h2>contre</h2><small>${esc(me)}</small><div class="av me">${esc(me.slice(0, 2).toUpperCase())}</div></div>`, 2000));
+export const coinScreen = (mine) => (reduced() ? Promise.resolve() : overlay("fxo-coin", `<div class="pill">${mine ? "Tu as la main !" : "L'adversaire a la main."}</div><div class="piece"></div>`, 1600));
+
 export function makeFx(getSeat) {
   return async (type, d) => {
     if (reduced() || !board() || board().classList.contains("hidden")) return;
+    if (type === "play") {                                   // carte jouée : zoom + rappel de l'effet
+      const k = d.card, long = k.category === "Coach" || k.category === "Moment";
+      const z = document.createElement("div"); z.className = "fx-zoom"; z.innerHTML = `<div class="fx-zcard">${cardHTML(k)}</div><div class="fx-zbub"><b>${esc(k.name)}</b>${k.effect && long ? `<br>${esc(String(k.effect).slice(0, 140))}` : ""}</div>`;
+      document.body.appendChild(z); sfx.tap?.(); requestAnimationFrame(() => z.classList.add("in"));
+      await sleep(long ? 1000 : 620); z.classList.remove("in"); await sleep(160); z.remove(); return;
+    }
     if (type === "attack") {
       const el = laneEl(d.slot); if (!el) return;
       const me = center(el), up = d.pi === getSeat();

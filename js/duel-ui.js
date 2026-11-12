@@ -5,7 +5,7 @@ import { aiAnswer, aiTurn } from "./engine/ai.js";
 import { autoDeck, validateDeck, PRESETS, buildPreset } from "./engine/deck.js";
 import { cardHTML } from "./cardview.js";
 import { Sync } from "./pvp.js";
-import { makeFx } from "./duel-fx.js";
+import { makeFx, turnBanner, introScreen, coinScreen } from "./duel-fx.js";
 import { deckViewHTML, deckPickerHTML, wireDeckPicker } from "./deckview.js";
 import { TUTO_PAGES, tutoHint } from "./tuto.js";
 import { TIPS, KEYWORD_INFO, PHASE_INFO, CATEGORY_INFO, tipsFor, comboFor } from "./glossary.js";
@@ -67,18 +67,39 @@ export function initDuel({ S, toast, tick, esc }) {
   function paintWins() { document.querySelectorAll("#diffList [data-level]").forEach((b) => { const w = getWins(b.dataset.level); const el = b.querySelector("[data-wins]"); if (el) el.textContent = w; }); }
   function showHub() {                                   // page d'accueil de l'onglet Combat (sans toucher à une partie en cours)
     if (g && g.winner === null && !board.classList.contains("hidden")) return;
-    dropAsk(); g = null; board.classList.add("hidden"); setup.classList.add("hidden"); hub.classList.remove("hidden");
+    dropAsk(); g = null; board.classList.add("hidden"); setup.classList.add("hidden"); hub.classList.remove("hidden"); document.body.classList.remove("in-duel");
   }
   function showSetup(toDecks) {                          // écran Solo : niveaux + deck
     dropAsk(); renderDeckPicker(); paintWins();
-    hub.classList.add("hidden"); setup.classList.remove("hidden"); board.classList.add("hidden"); g = null; updateNote();
+    hub.classList.add("hidden"); setup.classList.remove("hidden"); board.classList.add("hidden"); g = null; updateNote(); document.body.classList.remove("in-duel");
     if (toDecks === true) $("#deckTitle").scrollIntoView({ behavior: "smooth" }); else window.scrollTo({ top: 0 });
   }
   $("#htSolo").addEventListener("click", () => showSetup());
   $("#htDecks").addEventListener("click", () => showSetup(true));
   $("#htTuto").addEventListener("click", () => openTuto());
   $("#soloBack").addEventListener("click", showHub);
-  document.querySelectorAll("#diffList [data-level]").forEach((b) => b.addEventListener("click", () => { level = b.dataset.level; tuto = false; start(); }));
+  // ---------- écran « avant la partie » ----------
+  const prep = $("#duelPrep"), LVL = { easy: ["Facile", 1], normal: ["Normal", 2], hard: ["Difficile", 3] };
+  function prepOpen(l) { level = l; tuto = false; dropAsk(); renderDeckPicker(); renderPrep(); prep.classList.remove("hidden"); }
+  function prepClose() { prep.classList.add("hidden"); prep.innerHTML = ""; }
+  function renderPrep() {
+    const [name, boo] = LVL[level], v = $("#dsrc").value, o = deckOptions().find((x) => x.value === v);
+    prep.innerHTML = `<div class="pr-top"><button class="back-btn" id="prX" aria-label="Fermer">✕</button><b>Combat contre l'IA (${name.toLowerCase()})</b></div>
+      <div class="opp-card"><div class="dc-back"><img src="img/dos.webp" alt=""><span class="dc-ia">IA</span></div><div><span class="dc-tag ${level}">${name}</span><p>Adversaire : IA (${name.toLowerCase()})<br><small class="muted">Récompense : 🎁 +${boo} booster${boo > 1 ? "s" : ""} par victoire</small></p></div></div>
+      <button class="decksel" id="prDeck" type="button"><span class="dk">🃏</span><b>${esc(o?.label || "Deck")}</b><small class="muted">Touche pour changer de deck</small></button>
+      <p class="muted small" id="prNote"></p>
+      <button class="btn primary go" id="prGo" type="button">C'est parti !</button>`;
+    $("#prNote").textContent = $("#dsrcNote").textContent;
+    $("#prX").addEventListener("click", prepClose);
+    $("#prGo").addEventListener("click", () => { prepClose(); start(); });
+    $("#prDeck").addEventListener("click", () => {
+      openModal(`<h3>Choisir un deck</h3>${deckPickerHTML("dsrcM", deckOptions(), deckFor, $("#dsrc").value)}<div class="btn-col"><button class="btn primary" data-close>OK</button></div>`, (el) => {
+        wireDeckPicker(el, deckFor, (val) => { $("#dsrc").value = val; renderDeckPicker(); renderPrep(); });
+      });
+    });
+  }
+  $("#duelHubBtn").addEventListener("click", showHub);
+  document.querySelectorAll("#diffList [data-level]").forEach((b) => b.addEventListener("click", () => prepOpen(b.dataset.level)));
 
   async function start() {
     dropAsk();
@@ -88,7 +109,7 @@ export function initDuel({ S, toast, tick, esc }) {
     }
     const others = tuto ? PRESETS.filter((p) => p.id !== PRESETS[0].id) : PRESETS.filter((p) => p.id !== mine.preset);
     const theirs = buildPreset(others[Math.floor(Math.random() * others.length)].id);
-    logs = []; $("#bdLog").innerHTML = ""; SEAT = 0; OPP = 1; sync = null; $("#btnForfeit").classList.add("hidden");
+    logs = []; $("#bdLog").innerHTML = ""; SEAT = 0; OPP = 1; sync = null; $("#btnForfeit").classList.remove("hidden");
     g = new Game({
       decks: [mine, theirs], names: ["Toi", "Adversaire"], ai: [0, 1],
       ask: (game, pi, req) => (pi === 0 ? humanAsk(req) : aiAnswer(game, pi, req)),
@@ -96,6 +117,7 @@ export function initDuel({ S, toast, tick, esc }) {
     });
     g.aiLevel = tuto ? "easy" : level;
     window.__gmGame = g;
+    if (!tuto) await introScreen(`IA ${({ easy: "facile", normal: "normale", hard: "difficile" })[level]}`, S.getProfile?.()?.username || "Toi");
     addLog(custom ? "Tu joues avec les cartes de ta collection." : `Tu joues avec « ${mine.name} » (cartes prêtées pour la manche).`);
     setup.classList.add("hidden"); hub.classList.add("hidden"); board.classList.remove("hidden"); $("#duelEnd").classList.add("hidden");
     render(g); await loop();
@@ -104,8 +126,10 @@ export function initDuel({ S, toast, tick, esc }) {
   async function loop() {
     try {
       await g.setup(); render(g);
+      if (!tuto) await coinScreen(g.active === 0);
       while (g.winner === null) {
         await g.startTurn(); render(g); if (g.winner !== null) break;
+        await turnBanner(g.active === 0, g.turn);
         if (g.active === 0) { await humanTurn(); } else { await sleep(500); await aiTurn(g, 1, async () => { render(g); await sleep(650); }); }
         if (g.winner !== null) break;
         await g.endTurn(); render(g);
@@ -146,6 +170,7 @@ export function initDuel({ S, toast, tick, esc }) {
       await g.setup(); render();
       while (g.winner === null && sync && !sync.closed) {
         await g.startTurn(); render(); if (g.winner !== null) break;
+        await turnBanner(g.active === SEAT, g.turn);
         if (g.active === SEAT) { await humanTurn(); if (g.winner !== null || !sync || sync.closed) break; }
         else { await sync.remoteTurn(); render(); }
         if (g.winner !== null || !sync || sync.closed) break;
@@ -205,6 +230,7 @@ export function initDuel({ S, toast, tick, esc }) {
   function render() {
     if (!g) return;
     reopenAsk();
+    document.body.classList.toggle("in-duel", g.winner === null && !board.classList.contains("hidden"));
     const me = g.P(SEAT), op = g.P(OPP), myTurn = g.active === SEAT && g.winner === null;
     $("#bdOpp").innerHTML = `<b>${esc(op.name)}</b><span class="hand-backs">${Array.from({ length: op.hand.length }, () => "<i></i>").join("")}</span><span>✋ ${op.hand.length}</span>`;
     $("#bdMe").innerHTML = `<b>Toi</b><span>✋ ${me.hand.length}/5</span><span>❤ PV ${me.pv.length}</span>`;
@@ -297,7 +323,7 @@ export function initDuel({ S, toast, tick, esc }) {
   // ---------- actions du joueur ----------
   $("#btnCombat").addEventListener("click", () => { if (g.phase === "action" && !busy) { g.beginCombat(); render(); } });
   $("#btnEnd").addEventListener("click", () => { if (turnDone && !busy) { sync?.sendEnd(); const r = turnDone; turnDone = null; r(); } });
-  $("#btnForfeit").addEventListener("click", () => { if (sync && g && g.winner === null && confirm("Abandonner la partie ? Tu perds le duel.")) { sync.forfeit(); g.lose(SEAT, "abandon"); render(); if (turnDone) { const r = turnDone; turnDone = null; r(); } } });
+  $("#btnForfeit").addEventListener("click", () => { if (g && g.winner === null && confirm("Abandonner la partie ? Tu perds le duel.")) { sync?.forfeit(); g.lose(SEAT, "abandon"); render(); if (turnDone) { const r = turnDone; turnDone = null; r(); } } });
 
   async function run(fn) {
     if (busy) return; busy = true; render();

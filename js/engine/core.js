@@ -294,6 +294,7 @@ export class Game {
     if (!this.canPlay(pi, c)) return false;
     const P = this.P(pi), card = C(c);
     P.hand = P.hand.filter((x) => x !== c);
+    await this._fx("play", { pi, card });
     if (card.category === "Joueur") {
       let lane = opts.lane ?? this.freeLanes(pi)[0];
       if (lane === undefined || P.lanes[lane]) {
