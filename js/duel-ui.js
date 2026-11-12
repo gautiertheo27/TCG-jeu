@@ -109,7 +109,7 @@ export function initDuel({ S, toast, tick, esc }) {
     }
     const others = tuto ? PRESETS.filter((p) => p.id !== PRESETS[0].id) : PRESETS.filter((p) => p.id !== mine.preset);
     const theirs = buildPreset(others[Math.floor(Math.random() * others.length)].id);
-    logs = []; $("#bdLog").innerHTML = ""; SEAT = 0; OPP = 1; sync = null; $("#btnForfeit").classList.remove("hidden");
+    endQueued = false; logs = []; $("#bdLog").innerHTML = ""; SEAT = 0; OPP = 1; sync = null; $("#btnForfeit").classList.remove("hidden");
     g = new Game({
       decks: [mine, theirs], names: ["Toi", "Adversaire"], ai: [0, 1],
       ask: (game, pi, req) => (pi === 0 ? humanAsk(req) : aiAnswer(game, pi, req)),
@@ -129,7 +129,7 @@ export function initDuel({ S, toast, tick, esc }) {
       if (!tuto) await coinScreen(g.active === 0);
       while (g.winner === null) {
         await g.startTurn(); render(g); if (g.winner !== null) break;
-        await turnBanner(g.active === 0, g.turn);
+        if (g.active === 0) turnBanner(true, g.turn); else await turnBanner(false, g.turn);
         if (g.active === 0) { await humanTurn(); } else { await sleep(500); await aiTurn(g, 1, async () => { render(g); await sleep(650); }); }
         if (g.winner !== null) break;
         await g.endTurn(); render(g);
@@ -157,7 +157,7 @@ export function initDuel({ S, toast, tick, esc }) {
   // ---------- duel en ligne ----------
   async function startOnline({ seat, seed, decks, names, net, onEnd }) {
     dropAsk();
-    SEAT = seat; OPP = 1 - seat; onlineEnd = onEnd; logs = []; $("#bdLog").innerHTML = ""; busy = false; turnDone = null;
+    SEAT = seat; OPP = 1 - seat; onlineEnd = onEnd; endQueued = false; logs = []; $("#bdLog").innerHTML = ""; busy = false; turnDone = null;
     g = new Game({ decks, names, ai: [0, 0], seed, ask: () => null, onUpdate: render, log: addLog, fx: makeFx(() => SEAT) });
     sync = new Sync({ seat, net, humanAsk, onForfeit: () => { if (g && g.winner === null) { g.lose(OPP, "abandon de l'adversaire"); render(); sync?.close(); } } });
     sync.attach(g); window.__gmGame = g; window.__gmSync = sync; window.__gmSeat = seat;
@@ -170,7 +170,7 @@ export function initDuel({ S, toast, tick, esc }) {
       await g.setup(); render();
       while (g.winner === null && sync && !sync.closed) {
         await g.startTurn(); render(); if (g.winner !== null) break;
-        await turnBanner(g.active === SEAT, g.turn);
+        turnBanner(g.active === SEAT, g.turn);                          // purement visuel : ne jamais bloquer la partie
         if (g.active === SEAT) { await humanTurn(); if (g.winner !== null || !sync || sync.closed) break; }
         else { await sync.remoteTurn(); render(); }
         if (g.winner !== null || !sync || sync.closed) break;
@@ -186,8 +186,12 @@ export function initDuel({ S, toast, tick, esc }) {
     toast("Ton adversaire s'est déconnecté. Victoire dans 60 s s'il ne revient pas.");
     oppLeftTimer = setTimeout(() => { oppLeftTimer = null; if (g && g.winner === null && sync) { g.lose(OPP, "l'adversaire est parti"); render(); sync.close(); if (turnDone) { const r = turnDone; turnDone = null; r(); } } }, 60000);
   }
+  let endQueued = false;                     // « Passer le tour » touché avant que le tour soit prêt : pris en compte dès qu'il l'est
   function humanTurn() {
-    return new Promise((resolve) => { turnDone = resolve; render(g); });
+    return new Promise((resolve) => {
+      turnDone = resolve; render(g);
+      if (endQueued) { endQueued = false; sync?.sendEnd(); turnDone = null; resolve(); }
+    });
   }
 
   // ---------- journal ----------
@@ -322,7 +326,10 @@ export function initDuel({ S, toast, tick, esc }) {
 
   // ---------- actions du joueur ----------
   $("#btnCombat").addEventListener("click", () => { if (g.phase === "action" && !busy) { g.beginCombat(); render(); } });
-  $("#btnEnd").addEventListener("click", () => { if (turnDone && !busy) { sync?.sendEnd(); const r = turnDone; turnDone = null; r(); } });
+  $("#btnEnd").addEventListener("click", () => {
+    if (turnDone && !busy) { sync?.sendEnd(); const r = turnDone; turnDone = null; r(); }
+    else if (!turnDone && g && g.winner === null && g.active === SEAT) { endQueued = true; reopenAsk(); toast("Fin de tour prise en compte…"); }   // le tour n'est pas encore prêt (animation, réponse attendue)
+  });
   $("#btnForfeit").addEventListener("click", () => { if (g && g.winner === null && confirm("Abandonner la partie ? Tu perds le duel.")) { sync?.forfeit(); g.lose(SEAT, "abandon"); render(); if (turnDone) { const r = turnDone; turnDone = null; r(); } } });
 
   async function run(fn) {
