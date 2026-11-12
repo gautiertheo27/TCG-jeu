@@ -16,12 +16,13 @@ let activeFinish = null;
 export function abortOpening() { const r = $("#opening"); r.classList.add("hidden"); r.innerHTML = ""; document.body.classList.remove("no-scroll"); activeFinish?.({ again: false }); activeFinish = null; }
 
 // pulls : [{ id, holo, isNew }], packSrc : image du paquet, opts.quick : saute l'animation (récap seulement)
-export async function playOpening({ pulls, packSrc, quick = false, canAgain = false }) {
+export async function playOpening({ pulls, packSrc, packs = [], quick = false, canAgain = false, left = null }) {
   unlock();
   const root = $("#opening");
   root.classList.remove("hidden"); document.body.classList.add("no-scroll");
   root.innerHTML = `
     <div class="op-bg"></div><div class="op-flash"></div>
+    ${!quick && packs.length > 1 ? `<div class="op-ring" aria-hidden="true">${[-2, -1, 0, 1, 2].map((k) => `<img src="${esc(packs[(packs.indexOf(packSrc) + k + packs.length * 4) % packs.length])}" alt="" style="--k:${k}">`).join("")}</div>` : ""}
     <div class="op-stage">
       <div class="op-pack" aria-label="Paquet à ouvrir">
         <img class="op-part op-bottom" src="${esc(packSrc)}" alt="" draggable="false">
@@ -50,12 +51,12 @@ export async function playOpening({ pulls, packSrc, quick = false, canAgain = fa
     sfx.fanfare(BY_ID[best.id].rarity);
     const el = q(".op-summary"); el.classList.remove("hidden");
     el.innerHTML = `<h2>${pulls.length > 10 ? `${pulls.length / 10} boosters ouverts` : "Booster ouvert !"}</h2>
-      <p class="muted">${nNew ? `<b>${nNew}</b> nouvelle${nNew > 1 ? "s" : ""} carte${nNew > 1 ? "s" : ""} · ` : ""}Plus belle carte : ${esc(BY_ID[best.id].name)} (${rarityOf(BY_ID[best.id]).name})</p>
+      <p class="muted">${nNew ? `<b>${nNew}</b> nouvelle${nNew > 1 ? "s" : ""} carte${nNew > 1 ? "s" : ""} · ` : ""}Plus belle carte : ${esc(BY_ID[best.id].name)} (${rarityOf(BY_ID[best.id]).name})${left !== null ? ` · ${left} booster${left > 1 ? "s" : ""} restant${left > 1 ? "s" : ""}` : ""}</p>
       <div class="op-grid">${pulls.map((p, i) => {
         const c = BY_ID[p.id];
         return `<div class="op-mini" style="animation-delay:${Math.min(i, 30) * 45}ms">${p.isNew ? '<span class="badge-new">NOUVEAU</span>' : ""}${p.holo ? '<span class="badge-holo">HOLO</span>' : ""}${cardHTML(c, { holo: p.holo })}</div>`;
       }).join("")}</div>
-      <div class="btn-row center">${canAgain ? '<button class="btn primary" data-again>Ouvrir un autre booster</button>' : ""}<button class="btn ${canAgain ? "" : "primary"}" data-close>Continuer</button></div>`;
+      <div class="btn-row center">${canAgain ? '<button class="btn primary" data-again>Ouvrir un autre booster</button>' : ""}<button class="btn ${canAgain ? "" : "primary"}" data-close>Suivant</button></div>`;
     el.querySelector("[data-close]").addEventListener("click", close);
     el.querySelector("[data-again]")?.addEventListener("click", () => { again = true; close(); });
     el.querySelectorAll(".op-mini").forEach((m, i) => m.addEventListener("click", () => zoom(pulls[i])));
@@ -73,6 +74,12 @@ export async function playOpening({ pulls, packSrc, quick = false, canAgain = fa
   }
 
   if (quick) { summary(); return done; }
+  const ringEl = q(".op-ring");
+  if (ringEl) {                                      // ronde de boosters : le paquet choisi vient au centre, puis on l'ouvre
+    root.classList.add("ringing"); sfx.deal?.(0);
+    const endRing = () => { if (!root.classList.contains("ringing")) return; root.classList.remove("ringing"); ringEl.remove(); };
+    ringEl.addEventListener("click", endRing); setTimeout(endRing, 1250);
+  }
 
   // ---------- étape 1 : découper le paquet ----------
   const pack = q(".op-pack"), top = q(".op-top"), cut = q(".op-cut");
@@ -137,7 +144,7 @@ export async function playOpening({ pulls, packSrc, quick = false, canAgain = fa
       el.style.setProperty("--glow", r.color); el.dataset.r = c.rarity;
       const off = (total - 1 - i);
       el.innerHTML = `<div class="op-inner"><div class="op-face op-back"><span>GM</span></div>
-        <div class="op-face op-front">${p.isNew ? '<span class="badge-new">NOUVEAU</span>' : ""}${p.holo ? '<span class="badge-holo">HOLO</span>' : ""}${cardHTML(c, { holo: p.holo })}</div></div>`;
+        <div class="op-face op-front">${p.isNew ? '<span class="badge-new">NOUVEAU</span>' : ""}${p.holo ? '<span class="badge-holo">HOLO</span>' : ""}${cardHTML(c, { holo: p.holo })}</div></div><div class="op-rar" style="color:${r.color}">${r.symbol} ${esc(r.name)}</div>`;
       el.style.zIndex = String(total - i);
       el.style.setProperty("--ox", `${Math.min(off, 8) * 1.2}px`); el.style.setProperty("--oy", `${Math.min(off, 8) * -1.6}px`); el.style.setProperty("--rot", `${((i * 37) % 7) - 3}deg`);
       el.style.animationDelay = `${(total - 1 - i) * 55}ms`;
@@ -157,7 +164,7 @@ export async function playOpening({ pulls, packSrc, quick = false, canAgain = fa
     const flip = async (quick = false) => {
       if (flipped || busy) return; busy = true; flipped = true;
       const c = BY_ID[pulls[idx].id];
-      el.classList.add("flipped"); sfx.flip(c.rarity); try { navigator.vibrate?.(RARE.has(c.rarity) ? [20, 40, 30] : 10); } catch (_) {}
+      el.classList.add("flipped"); if (RARE.has(c.rarity)) { const bg = q(".op-bg"); bg.style.setProperty("--tint", RARITIES[c.rarity].color); bg.classList.add("tint"); } sfx.flip(c.rarity); try { navigator.vibrate?.(RARE.has(c.rarity) ? [20, 40, 30] : 10); } catch (_) {}
       await sleep(quick ? 150 : 330);
       if (BIG.has(c.rarity)) { burst(el, RARITIES[c.rarity].color); flash(c.rarity !== "R"); root.classList.add("shake"); setTimeout(() => root.classList.remove("shake"), 450); }
       if (!fast) hint(idx === total - 1 ? "Touche pour voir le récapitulatif" : "Touche ou glisse pour passer à la suivante");
@@ -165,7 +172,7 @@ export async function playOpening({ pulls, packSrc, quick = false, canAgain = fa
     };
     const dismiss = async (dir, quick = false) => {
       if (busy) return; busy = true;
-      sfx.dismiss(); el.style.transition = quick ? "transform .2s ease-in, opacity .2s" : "transform .45s ease-in, opacity .45s"; el.style.transform = `translate(${dir * 130}vw, -40px) rotate(${dir * 24}deg)`; el.style.opacity = "0";
+      q(".op-bg").classList.remove("tint"); sfx.dismiss(); el.style.transition = quick ? "transform .2s ease-in, opacity .2s" : "transform .45s ease-in, opacity .45s"; el.style.transform = `translate(${dir * 130}vw, -40px) rotate(${dir * 24}deg)`; el.style.opacity = "0";
       await sleep(quick ? 190 : 380); el.remove(); idx++;
       if (idx >= total) { summary(); return; }
       updateCount(); if (!fast) hint("Touche la carte pour la retourner"); arm();

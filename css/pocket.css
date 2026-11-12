@@ -116,3 +116,14 @@ footer { padding-bottom: 110px; }
 .fx-zbub { background: #fff; color: #3a2a4a; border-radius: 18px; padding: 10px 14px; font-weight: 600; font-size: .85rem; max-width: min(360px, 82vw); text-align: center; }
 @media (max-width: 899px) { body.in-duel .bnav { display: none; } body.in-duel main { padding-bottom: 24px; } body.in-duel footer { display: none; } body.in-duel .toast { bottom: 24px !important; } }
 #duelModal { z-index: 120; }
+
+/* ---------- Ouverture de booster : ronde de paquets, symbole de rareté, fond teinté ---------- */
+.op-ring { position: absolute; inset: 0; z-index: 4; display: grid; place-items: center; background: radial-gradient(circle at 50% 55%, #ffffff22, transparent 55%), #120b1a; cursor: pointer; }
+.op-ring img { position: absolute; width: min(190px, 46vw); border-radius: 12px; box-shadow: 0 16px 34px #000a; transform: translateX(calc(var(--k) * 44vw)) scale(.6); opacity: 0; animation: ringIn 1.2s cubic-bezier(.2, .8, .2, 1) forwards; }
+.op-ring img[style*="--k:0"] { z-index: 2; box-shadow: 0 0 50px #ff4fa388; }
+@keyframes ringIn { 0% { transform: translateX(calc(var(--k) * 70vw)) scale(.5) rotate(calc(var(--k) * 14deg)); opacity: 0; } 55% { transform: translateX(calc(var(--k) * 30vw)) scale(.75) rotate(calc(var(--k) * 6deg)); opacity: .85; } 100% { transform: translateX(calc(var(--k) * 42vw)) scale(var(--sc, .72)); opacity: calc(1 - var(--ab, 0) * .45); } }
+.op-ring img[style*="--k:0"] { --sc: 1.05; animation-name: ringCenter; } @keyframes ringCenter { 0% { transform: scale(.5); opacity: 0; } 60% { transform: scale(.9); opacity: 1; } 100% { transform: scale(1.05); opacity: 1; } }
+#opening.ringing .op-stage, #opening.ringing .op-hint, #opening.ringing .op-skip { visibility: hidden; }
+.op-bg::after { content: ""; position: absolute; inset: 0; background: radial-gradient(700px 500px at 50% 45%, var(--tint, transparent), transparent 70%); opacity: 0; transition: opacity .5s; } .op-bg.tint::after { opacity: .55; }
+.op-rar { position: absolute; left: 0; right: 0; bottom: -34px; text-align: center; font-weight: 800; letter-spacing: .5px; text-shadow: 0 0 10px #000, 0 0 14px currentColor; opacity: 0; transition: opacity .3s .2s; pointer-events: none; }
+.op-card.flipped .op-rar { opacity: 1; }

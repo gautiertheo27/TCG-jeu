@@ -130,7 +130,7 @@ async function openPacks(count) {
     }
     tick();
     // « Tout ouvrir » : pas d'animation, on va directement à la page de récapitulatif de toutes les cartes.
-    const { again } = await playOpening({ pulls, packSrc: BOOSTER_ART[packIdx], quick: count > 1, canAgain: S.get().stock > 0 });
+    const { again } = await playOpening({ pulls, packSrc: BOOSTER_ART[packIdx], packs: BOOSTER_ART, quick: count > 1, canAgain: S.get().stock > 0, left: S.get().stock });
     opening = false; tick(); window.scrollTo({ top: 0 });
     if (again) openPacks(1);
   } catch (e) {
