@@ -3226,5 +3226,33 @@ export const CARD_DATA = [
 "flavor": "Plus que quelques années.",
 "illustrator": "Claude (IA) · fan-made",
 "img": "cartes/P15.webp"
+},
+{
+"id": "P16",
+"label": "P16",
+"n": 1016,
+"name": "Astro sécu",
+"category": "Joueur",
+"subtype": null,
+"color": "Jaune",
+"def": 90,
+"stars": 3,
+"rarity": "P",
+"printedRarity": "P",
+"attacks": [
+{
+"name": "Coup de lampe",
+"cost": [
+"Jaune"
+],
+"damage": 60,
+"text": null
+}
+],
+"power": 60,
+"effect": "SHIELD : Tant qu'il est en jeu, ce Joueur ignore la première attaque qu'il subit.",
+"flavor": "Circulez, y'a rien à voir.",
+"illustrator": "Claude (IA) · fan-made",
+"img": "cartes/P16.webp"
 }
 ];

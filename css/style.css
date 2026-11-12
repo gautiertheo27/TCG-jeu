@@ -480,3 +480,34 @@ body.no-scroll { overflow: hidden; }
 #duelModal .modal-box:has(.dv) { width: min(960px, 96vw); max-height: 92vh; overflow: auto; }
 .dtile.open { grid-column: 1 / -1; } .dtile.open .dv-grid { grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); }
 @media (min-width: 1100px) { .dtile.open .dv-grid { grid-template-columns: repeat(auto-fill, minmax(128px, 1fr)); } }
+
+/* ---------- Effets de rareté sur les vraies cartes ---------- */
+/* Épique : léger reflet qui balaie la carte + petites étincelles */
+.card[data-r="E"]:has(> img)::before {
+  content: ""; position: absolute; inset: 0; z-index: 2; pointer-events: none; mix-blend-mode: soft-light;
+  background: linear-gradient(105deg, transparent 38%, rgba(255,255,255,.75) 50%, transparent 62%); background-size: 320% 100%;
+  animation: epicSweep 4.2s ease-in-out infinite;
+}
+.card[data-r="E"]:has(> img)::after {
+  content: ""; position: absolute; inset: 0; z-index: 2; pointer-events: none; animation: epicTwinkle 2.6s ease-in-out infinite;
+  background:
+    radial-gradient(circle at 16% 22%, #fff 0 1.3px, #d9b8ff 2px, transparent 4px), radial-gradient(circle at 82% 18%, #fff 0 1.1px, #d9b8ff 2px, transparent 4px),
+    radial-gradient(circle at 70% 56%, #fff 0 1.2px, #d9b8ff 2px, transparent 4px), radial-gradient(circle at 26% 64%, #fff 0 1px, #d9b8ff 2px, transparent 3.5px),
+    radial-gradient(circle at 90% 78%, #fff 0 1.1px, #d9b8ff 2px, transparent 4px), radial-gradient(circle at 48% 36%, #fff 0 .9px, #d9b8ff 1.6px, transparent 3.5px);
+}
+@keyframes epicSweep { 0% { background-position: 150% 0; } 60%, 100% { background-position: -50% 0; } }
+@keyframes epicTwinkle { 0%, 100% { opacity: .15; } 50% { opacity: .95; } }
+
+/* Reverse (holo) : seulement sur le cadre de texte, avec le motif « TOUT COMMENCE ICI » */
+.card.holo:has(> img)::after {
+  inset: 61.5% 7.5% 9% 7.5%; z-index: 2; mix-blend-mode: normal; opacity: .2; border-radius: 3%;
+  background: linear-gradient(var(--ang, 115deg), transparent 10%, #ff4fa3 28%, #4fd1ff 46%, #ffe14f 64%, #7cff9b 80%, transparent 95%);
+  background-size: 260% 260%; background-position: var(--px, 50%) var(--py, 50%);
+}
+.card.holo:has(> img)::before {
+  content: ""; position: absolute; inset: 61.5% 7.5% 9% 7.5%; z-index: 2; pointer-events: none; mix-blend-mode: normal; opacity: .5; border-radius: 3%;
+  background: linear-gradient(calc(var(--ang, 115deg) + 40deg), #ff4fa3 5%, #4fd1ff 30%, #ffe14f 55%, #7cff9b 78%, #ff4fa3 100%); background-size: 300% 300%; background-position: var(--px, 50%) var(--py, 50%);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='96'%3E%3Ctext x='0' y='30' font-family='Arial Black,Impact,sans-serif' font-size='21' font-weight='900' letter-spacing='3' fill='black'%3ETOUT COMMENCE ICI%3C/text%3E%3Ctext x='150' y='78' font-family='Arial Black,Impact,sans-serif' font-size='21' font-weight='900' letter-spacing='3' fill='black'%3ETOUT COMMENCE ICI%3C/text%3E%3Ctext x='-150' y='78' font-family='Arial Black,Impact,sans-serif' font-size='21' font-weight='900' letter-spacing='3' fill='black'%3ETOUT COMMENCE ICI%3C/text%3E%3C/svg%3E") 0 0 / 62cqw auto;
+          mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='96'%3E%3Ctext x='0' y='30' font-family='Arial Black,Impact,sans-serif' font-size='21' font-weight='900' letter-spacing='3' fill='black'%3ETOUT COMMENCE ICI%3C/text%3E%3Ctext x='150' y='78' font-family='Arial Black,Impact,sans-serif' font-size='21' font-weight='900' letter-spacing='3' fill='black'%3ETOUT COMMENCE ICI%3C/text%3E%3Ctext x='-150' y='78' font-family='Arial Black,Impact,sans-serif' font-size='21' font-weight='900' letter-spacing='3' fill='black'%3ETOUT COMMENCE ICI%3C/text%3E%3C/svg%3E") 0 0 / 62cqw auto;
+}
+@media (prefers-reduced-motion: reduce) { .card[data-r="E"]:has(> img)::before, .card[data-r="E"]:has(> img)::after { animation: none; } }
