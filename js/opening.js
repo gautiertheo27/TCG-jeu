@@ -28,10 +28,11 @@ export async function playOpening({ pulls, packSrc, packs = [], quick = false, c
         <img class="op-part op-bottom" src="${esc(packSrc)}" alt="" draggable="false">
         <img class="op-part op-top" src="${esc(packSrc)}" alt="" draggable="false">
         <div class="op-cut"><span></span></div>
+        <div class="op-bar"><i class="op-knob">✂</i><b>Glisse pour ouvrir</b><em>➜ ➜ ➜</em></div>
       </div>
       <div class="op-stack hidden"></div>
     </div>
-    <div class="op-hint">Touche le paquet, ou glisse sur son haut, pour l'ouvrir ➜</div>
+    <div class="op-hint">Fais glisser la barre en haut du paquet (ou touche-le) pour l'ouvrir ➜</div>
     <div class="op-count hidden"></div>
     <button class="op-skip btn" type="button">Révélation rapide ⏩</button>
     <div class="op-summary hidden"></div>`;
@@ -82,13 +83,13 @@ export async function playOpening({ pulls, packSrc, packs = [], quick = false, c
   }
 
   // ---------- étape 1 : découper le paquet ----------
-  const pack = q(".op-pack"), top = q(".op-top"), cut = q(".op-cut");
+  const pack = q(".op-pack"), top = q(".op-top"), cut = q(".op-cut"), bar = q(".op-bar");
   let torn = false;
   const tear = async (fromDrag = 0) => {
     if (torn) return; torn = true;
     sfx.tear();
     top.style.transition = "transform .55s cubic-bezier(.3,.7,.3,1), opacity .55s"; top.style.transform = "translate(130%, -90px) rotate(28deg)"; top.style.opacity = "0";
-    cut.classList.add("hidden"); hint("");
+    cut.classList.add("hidden"); bar.classList.add("hidden"); hint("");
     flash(false); await sleep(260);
     q(".op-bottom").classList.add("drop"); try { navigator.vibrate?.(20); } catch (_) {}
     await sleep(380);
@@ -99,19 +100,20 @@ export async function playOpening({ pulls, packSrc, packs = [], quick = false, c
   let drag = null;
   pack.addEventListener("pointerdown", (e) => {
     if (torn) return; const r = pack.getBoundingClientRect();
-    drag = { x: e.clientX, y: e.clientY, w: r.width, moved: 0, onTop: e.clientY - r.top < r.height * 0.42 };
+    drag = { x: e.clientX, y: e.clientY, w: r.width, moved: 0, onTop: e.clientY - r.top < r.height * 0.34 };
     try { pack.setPointerCapture(e.pointerId); } catch (_) {}
   });
   pack.addEventListener("pointermove", (e) => {
     if (!drag || torn) return; const dx = Math.max(0, e.clientX - drag.x);
     drag.moved = Math.max(drag.moved, Math.hypot(e.clientX - drag.x, e.clientY - drag.y));
+    if (drag.onTop) pack.style.setProperty("--p", Math.min(1, dx / (drag.w * 0.5)));
     if (drag.onTop && drag.moved > 10) { top.style.transition = "none"; top.style.transform = `translate(${dx * 0.9}px, ${-dx * 0.12}px) rotate(${dx * 0.05}deg)`; }
     if (dx > drag.w * 0.5 && drag.onTop) { drag = null; tear(); }
   });
   // Un simple toucher / clic ouvre aussi le paquet ; un glissé trop court le remet en place.
   pack.addEventListener("pointerup", () => {
     if (!drag || torn) { drag = null; return; }
-    const tap = drag.moved < 12; drag = null;
+    const tap = drag.moved < 12; drag = null; pack.style.setProperty("--p", 0);
     if (tap) tear(); else { top.style.transition = "transform .25s"; top.style.transform = ""; }
   });
   pack.addEventListener("pointercancel", () => { drag = null; top.style.transition = "transform .25s"; top.style.transform = ""; });
