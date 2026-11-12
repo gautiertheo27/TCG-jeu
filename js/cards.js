@@ -41,7 +41,7 @@ export const MISSING = Array.from({ length: SET.total }, (_, i) => i + 1).filter
 // (la Rare prend le reste). Les probabilités se recalculent seules quand on ajoute des cartes.
 // Part de Communes / Peu communes possible à la carte 10 (chacune bien plus rare que la Rare).
 const TEN_C = 0.05, TEN_PC = 0.05;
-export const LEGENDARY_PER_BOOSTER = 1.5 / 24;   // en moyenne 1,5 Légendaire (toutes confondues) tous les 24 boosters
+export const LEGENDARY_PER_BOOSTER = 1 / 24;   // en moyenne 1 Légendaire (toutes confondues) tous les 24 boosters
 function slotTables() {
   const n = (r) => BY_RARITY[r]?.length || 0, round = (x) => Math.round(x * 10000) / 10000, f = 1 - TEN_C - TEN_PC;
   // Pour viser « a » par carte et par booster avec la carte 9 (proba x·n) et la carte 10 (proba f·x·n) : f·x² - (1+f)·x + a = 0
