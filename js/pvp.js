@@ -7,8 +7,8 @@ const encode = (req, v) => {
   switch (req.kind) {
     case "confirm": return !!v;
     case "choice": return v == null ? -1 : req.options.findIndex((o) => o.value === v);
-    case "card": return v == null ? -1 : req.cards.indexOf(v);
-    case "slot": return v == null ? -1 : req.slots.indexOf(v);
+    case "card": return v == null ? -1 : (v.uid ?? req.cards.indexOf(v));      // par uid : insensible à l'ordre de la liste affichée
+    case "slot": return v == null ? -1 : (v.uid ?? req.slots.indexOf(v));
   }
   return null;
 };
@@ -16,8 +16,8 @@ const decode = (req, e) => {
   switch (req.kind) {
     case "confirm": return !!e;
     case "choice": return e < 0 ? null : req.options[e].value;
-    case "card": return e < 0 ? null : req.cards[e];
-    case "slot": return e < 0 ? null : req.slots[e];
+    case "card": return e < 0 ? null : (req.cards.find((c) => c.uid === e) ?? null);       // uid inconnu : ignoré proprement
+    case "slot": return e < 0 ? null : (req.slots.find((s) => s.uid === e) ?? null);
   }
   return null;
 };

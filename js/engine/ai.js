@@ -33,7 +33,7 @@ export function aiAnswer(g, pi, req) {
           if (safe.length) return by((s) => g.defense(s));
           return g.P(pi).pv.length <= 1 ? by((s) => -value(s)) : null;
         }
-        case "support": return ss.sort((a, b) => g.attackValue(b, 0) - g.attackValue(a, 0)).find((s) => Math.max(...g.attackOptions(pi, s).map((i) => g.attackValue(s, i))) >= req.need) || null;
+        case "support": return [...ss].sort((a, b) => g.attackValue(b, 0) - g.attackValue(a, 0)).find((s) => Math.max(...g.attackOptions(pi, s).map((i) => g.attackValue(s, i))) >= req.need) || null;
         default: return req.allowNone ? null : by((s) => g.defense(s));
       }
     }
