@@ -195,10 +195,49 @@ export function initDuel({ S, toast, tick, esc }) {
   }
 
   // ---------- journal ----------
+  // ---------- fil d'actions visuel (remplace le journal texte) ----------
+  const BY_NAME = new Map(CARDS.map((c) => [c.name, c]));
+  const whoOf = (name) => (!g ? "" : name === g.P(SEAT).name ? "me" : name === g.P(OPP).name ? "opp" : "");
+  const PARSERS = [
+    [/^— Tour (\d+) : (.+) —$/, (m) => ({ kind: "turn", ic: "⏱", title: `Tour ${m[1]}`, sub: m[2], who: whoOf(m[2]) })],
+    [/^(.+?) déploie (.+) \(case (\d+)\)\.$/, (m) => ({ kind: "deploy", ic: "⬇️", who: whoOf(m[1]), title: "Déploie", sub: `${m[2]} · case ${m[3]}`, card: m[2] })],
+    [/^(.+?) lie (.+) à (.+)\.$/, (m) => ({ kind: "link", ic: "🔗", who: whoOf(m[1]), title: "Lie un Objet", sub: `${m[2]} → ${m[3]}`, card: m[2] })],
+    [/^(.+?) attaque avec (.+) : (.+)\.$/, (m) => ({ kind: "attack", ic: "⚔️", who: whoOf(m[1]), title: m[3], sub: `${m[2]} attaque`, card: m[2] })],
+    [/^(.+?) défend avec (.+)\.$/, (m) => ({ kind: "defend", ic: "🛡️", who: whoOf(m[1]), title: "Défend", sub: m[2], card: m[2] })],
+    [/^(.+) soutient l'attaque \(\+(\d+)\)\.$/, (m) => ({ kind: "support", ic: "🤝", title: `Soutien +${m[2]}`, sub: m[1], card: m[1] })],
+    [/^Shield : (.+) ignore l'attaque\.$/, (m) => ({ kind: "defend", ic: "🛡️", title: "Shield !", sub: `${m[1]} ignore l'attaque`, card: m[1] })],
+    [/^(\d+) contre Def (\d+)\.$/, (m) => ({ kind: "versus", ic: "💥", title: `${m[1]} ⚔ ${m[2]} 🛡`, sub: +m[1] >= +m[2] ? "L'attaque passe" : "La défense tient" })],
+    [/^Riposte : (.+) frappe (.+) \((\d+) contre Def (\d+)\)\.$/, (m) => ({ kind: "versus", ic: "↩️", title: "Riposte !", sub: `${m[1]} frappe ${m[2]} (${m[3]} ⚔ ${m[4]} 🛡)`, card: m[1] })],
+    [/^(.+) est vaincu\.$/, (m) => ({ kind: "ko", ic: "💀", title: "K.O.", sub: m[1], card: m[1] })],
+    [/^(.+) touche le CEO de (.+) !$/, (m) => ({ kind: "ceo", ic: "💔", who: whoOf(m[2]) === "me" ? "opp" : "me", title: "Point de Victoire perdu", sub: `CEO de ${m[2]} touché par ${m[1]}`, card: m[1] })],
+    [/^(.+?) déclenche la Résilience de (.+)\.$/, (m) => ({ kind: "resil", ic: "✨", who: whoOf(m[1]), title: "Résilience", sub: m[2], card: m[2] })],
+    [/^(.+?) joue (.+)\.$/, (m) => ({ kind: "play", ic: "🃏", who: whoOf(m[1]), title: "Joue", sub: m[2], card: m[2] })],
+    [/^(.+?) ajoute (\d+) carte.*main\.$/, (m) => ({ kind: "draw", ic: "➕", who: whoOf(m[1]), title: `+${m[2]} carte${+m[2] > 1 ? "s" : ""} en main`, sub: "" })],
+    [/^(.+) est bench à la place de (.+)\.$/, (m) => ({ kind: "bench", ic: "🔄", title: "Échange", sub: `${m[1]} remplace ${m[2]}`, card: m[1] })],
+    [/^(.+) est bench\.$/, (m) => ({ kind: "bench", ic: "⤵️", title: "Bench", sub: m[1], card: m[1] })],
+    [/^🏆 (.+) gagne : (.+)\.$/, (m) => ({ kind: "win", ic: "🏆", who: whoOf(m[1]), title: `${m[1]} gagne !`, sub: m[2] })],
+    [/^(.+) commence la partie\.$/, (m) => ({ kind: "start", ic: "🎲", who: whoOf(m[1]), title: `${m[1]} commence`, sub: "" })],
+  ];
+  function parseLog(msg) {
+    for (const [re, f] of PARSERS) { const m = msg.match(re); if (m) return f(m); }
+    return { kind: "note", ic: "•", title: msg, sub: "" };
+  }
+  const BUBBLE_KINDS = new Set(["attack", "deploy", "play", "ko", "ceo", "win", "link", "resil"]);
+  let bubbleT = null;
+  function evBubble(ev) {
+    let b = $("#evBubble"); if (!b) { b = document.createElement("div"); b.id = "evBubble"; b.className = "ev-bubble"; document.body.appendChild(b); }
+    b.className = "ev-bubble show " + (ev.who || ""); b.innerHTML = `<span>${ev.ic}</span><b>${esc(ev.title)}</b>${ev.sub ? `<small>${esc(ev.sub)}</small>` : ""}`;
+    clearTimeout(bubbleT); bubbleT = setTimeout(() => b.classList.remove("show"), 1900);
+  }
   function addLog(msg) {
-    const el = document.createElement("div"); el.textContent = msg; $("#bdLog").appendChild(el);
-    while ($("#bdLog").children.length > 60) $("#bdLog").firstChild.remove();
-    $("#bdLog").scrollTop = 1e6;
+    const ev = parseLog(msg), c = ev.card ? BY_NAME.get(ev.card) : null;
+    const el = document.createElement("div"); el.className = `fd ${ev.kind} ${ev.who || ""}`;
+    el.innerHTML = ev.kind === "turn" ? `<span>${ev.ic} ${esc(ev.title)}</span><small>${esc(ev.sub)}</small>`
+      : `<span class="fd-ic">${ev.ic}</span>${c ? `<img class="fd-thumb" src="${esc(c.img)}" alt="" draggable="false">` : ""}<span class="fd-tx"><b>${esc(ev.title)}</b>${ev.sub ? `<small>${esc(ev.sub)}</small>` : ""}</span>`;
+    el.title = msg;
+    const box = $("#bdLog"); box.insertBefore(el, box.firstChild);          // le plus récent en haut
+    while (box.children.length > 60) box.lastChild.remove();
+    if (document.querySelector("#duelBoard") && !board.classList.contains("hidden") && BUBBLE_KINDS.has(ev.kind) && !document.hidden) evBubble(ev);
   }
 
   // ---------- rendu du plateau ----------
