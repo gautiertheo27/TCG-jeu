@@ -114,7 +114,7 @@ footer { padding-bottom: 110px; }
 .fx-zoom { position: fixed; inset: 0; z-index: 8000; pointer-events: none; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; background: #0008; opacity: 0; transition: opacity .15s; } .fx-zoom.in { opacity: 1; }
 .fx-zcard { width: min(220px, 52vw); filter: drop-shadow(0 0 28px #ff4fa3aa); transform: scale(.7); transition: transform .2s; } .fx-zoom.in .fx-zcard { transform: none; }
 .fx-zbub { background: #fff; color: #3a2a4a; border-radius: 18px; padding: 10px 14px; font-weight: 600; font-size: .85rem; max-width: min(360px, 82vw); text-align: center; }
-@media (max-width: 899px) { body.in-duel .bnav { display: none; } body.in-duel main { padding-bottom: 24px; } body.in-duel footer { display: none; } body.in-duel .toast { bottom: 24px !important; } }
+@media (max-width: 899px) { body.in-duel footer { display: none; } }
 #duelModal { z-index: 120; }
 
 /* ---------- Ouverture de booster : ronde de paquets, symbole de rareté, fond teinté ---------- */
@@ -145,7 +145,7 @@ footer { padding-bottom: 110px; }
 @media (max-width: 899px) {
   #duelBoard { display: flex; flex-direction: column; }
   #duelBoard .playmat { order: 0; } #duelBoard .tuto-bar { order: 1; } #duelBoard .bd-hand { order: 2; } #duelBoard .duel-end { order: 3; }
-  #duelBoard .bd-controls { order: 4; position: sticky; bottom: 0; width: 100%; max-width: none; padding: 8px 0 max(8px, env(safe-area-inset-bottom)); background: linear-gradient(transparent, var(--bg) 35%); justify-content: stretch; }
+  #duelBoard .bd-controls { order: 4; position: sticky; bottom: calc(84px + env(safe-area-inset-bottom)); width: 100%; max-width: none; padding: 8px 0 8px; background: linear-gradient(transparent, var(--bg) 35%); justify-content: stretch; }
   #duelBoard .bd-logbox { order: 5; }
   #duelBoard .bd-actions { display: flex; flex-wrap: nowrap; width: 100%; gap: 6px; }
   #duelBoard .bd-actions .btn { flex: 1 1 0; min-width: 0; padding: 8px 6px; font-size: .82rem; line-height: 1.15; min-height: 46px; white-space: normal; }
