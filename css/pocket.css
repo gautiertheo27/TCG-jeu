@@ -172,3 +172,5 @@ footer { padding-bottom: 110px; }
 
 /* Ouverture : les cartes arrivent déjà face visible (pas de retournement) */
 .op-card.nf .op-inner { transition: none !important; }
+
+.op-stack .op-card:not(.top) { visibility: hidden; }   /* seule la carte du dessus est visible : pas de dos, pas de spoil */

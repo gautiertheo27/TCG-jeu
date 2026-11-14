@@ -148,7 +148,7 @@ export async function playOpening({ pulls, packSrc, packs = [], quick = false, c
       el.innerHTML = `<div class="op-inner"><div class="op-face op-back"><span>GM</span></div>
         <div class="op-face op-front">${p.isNew ? '<span class="badge-new">NOUVEAU</span>' : ""}${p.holo ? '<span class="badge-holo">HOLO</span>' : ""}${cardHTML(c, { holo: p.holo })}</div></div><div class="op-rar" style="color:${r.color}">${r.symbol} ${esc(r.name)}</div>`;
       el.style.zIndex = String(total - i);
-      el.style.setProperty("--ox", `${Math.min(off, 8) * 1.2}px`); el.style.setProperty("--oy", `${Math.min(off, 8) * -1.6}px`); el.style.setProperty("--rot", `${((i * 37) % 7) - 3}deg`);
+      el.style.setProperty("--ox", "0px"); el.style.setProperty("--oy", "0px"); el.style.setProperty("--rot", "0deg");   // cartes parfaitement alignées : rien de la carte de derrière ne dépasse
       el.style.animationDelay = `${(total - 1 - i) * 55}ms`;
       stack.appendChild(el); return el;
     });
