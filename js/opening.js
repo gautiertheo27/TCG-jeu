@@ -142,7 +142,7 @@ export async function playOpening({ pulls, packSrc, packs = [], quick = false, c
     q(".op-count").classList.remove("hidden");
     cards = pulls.map((p, i) => {
       const c = BY_ID[p.id], r = RARITIES[c.rarity];
-      const el = document.createElement("div"); el.className = "op-card" + (RARE.has(c.rarity) ? " rare" : "");
+      const el = document.createElement("div"); el.className = "op-card nf" + (RARE.has(c.rarity) ? " rare" : "");
       el.style.setProperty("--glow", r.color); el.dataset.r = c.rarity;
       const off = (total - 1 - i);
       el.innerHTML = `<div class="op-inner"><div class="op-face op-back"><span>GM</span></div>
@@ -162,7 +162,7 @@ export async function playOpening({ pulls, packSrc, packs = [], quick = false, c
   function arm() {
     const el = cards[idx]; if (!el) return;
     let flipped = false, g = null, busy = false;
-    el.classList.add("top");
+    el.classList.add("top", "flipped");     // la carte du dessus est déjà face visible (sans animation de retournement)
     const flip = async (quick = false) => {
       if (flipped || busy) return; busy = true; flipped = true;
       const c = BY_ID[pulls[idx].id];
@@ -195,7 +195,7 @@ export async function playOpening({ pulls, packSrc, packs = [], quick = false, c
     el.tabIndex = 0; el.focus?.({ preventScroll: true });
     el.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); flipped ? dismiss(1) : flip(); } });
     ctl = { flip, dismiss };
-    setTimeout(() => { if (!flipped && !ended && cards[idx] === el) flip(); }, idx === 0 ? 650 : 140);   // les cartes se montrent face visible toutes seules
+    setTimeout(() => { if (!flipped && !ended && cards[idx] === el) flip(); }, idx === 0 ? 450 : 120);   // les cartes se montrent face visible toutes seules
   }
 
   function burst(el, color) {
