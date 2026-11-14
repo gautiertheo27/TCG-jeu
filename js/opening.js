@@ -153,7 +153,7 @@ export async function playOpening({ pulls, packSrc, packs = [], quick = false, c
       stack.appendChild(el); return el;
     });
     pulls.forEach((_, i) => sfx.deal(i));
-    hint("Touche la carte pour la retourner");
+    hint("Les cartes se révèlent…");
     updateCount(); arm();
   }
   const updateCount = () => (q(".op-count").textContent = `${Math.min(idx + 1, total)} / ${total}`);
@@ -177,7 +177,7 @@ export async function playOpening({ pulls, packSrc, packs = [], quick = false, c
       q(".op-bg").classList.remove("tint"); sfx.dismiss(); el.style.transition = quick ? "transform .2s ease-in, opacity .2s" : "transform .45s ease-in, opacity .45s"; el.style.transform = `translate(${dir * 130}vw, -40px) rotate(${dir * 24}deg)`; el.style.opacity = "0";
       await sleep(quick ? 190 : 380); el.remove(); idx++;
       if (idx >= total) { summary(); return; }
-      updateCount(); if (!fast) hint("Touche la carte pour la retourner"); arm();
+      updateCount(); arm();
     };
     const onDown = (e) => { g = { x: e.clientX, y: e.clientY, moved: 0 }; el.setPointerCapture(e.pointerId); el.style.transition = "none"; };
     const onMove = (e) => {
@@ -195,6 +195,7 @@ export async function playOpening({ pulls, packSrc, packs = [], quick = false, c
     el.tabIndex = 0; el.focus?.({ preventScroll: true });
     el.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); flipped ? dismiss(1) : flip(); } });
     ctl = { flip, dismiss };
+    setTimeout(() => { if (!flipped && !ended && cards[idx] === el) flip(); }, idx === 0 ? 650 : 140);   // les cartes se montrent face visible toutes seules
   }
 
   function burst(el, color) {
