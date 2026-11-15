@@ -174,3 +174,8 @@ footer { padding-bottom: 110px; }
 .op-card.nf .op-inner { transition: none !important; }
 
 .op-stack .op-card:not(.top) { visibility: hidden; }   /* seule la carte du dessus est visible : pas de dos, pas de spoil */
+
+/* La carte suivante est visible (face visible) sous celle qu'on fait glisser ; ses badges et sa lueur n'apparaissent qu'une fois dessus */
+.op-stack .op-card.next { visibility: visible; }
+.op-card.next:not(.top) .badge-new, .op-card.next:not(.top) .badge-holo, .op-card.next:not(.top) .op-rar { opacity: 0; }
+.op-card.next:not(.top)::before { display: none; }

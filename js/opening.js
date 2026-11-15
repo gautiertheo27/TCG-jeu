@@ -162,6 +162,7 @@ export async function playOpening({ pulls, packSrc, packs = [], quick = false, c
   function arm() {
     const el = cards[idx]; if (!el) return;
     let flipped = false, g = null, busy = false;
+    const nx = cards[idx + 1]; if (nx) nx.classList.add("next", "flipped");     // la carte suivante est déjà visible sous celle qu'on fait glisser
     el.classList.add("top", "flipped");     // la carte du dessus est déjà face visible (sans animation de retournement)
     const flip = async (quick = false) => {
       if (flipped || busy) return; busy = true; flipped = true;
