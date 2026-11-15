@@ -3301,5 +3301,34 @@ export const CARD_DATA = [
 "flavor": "Buy le billet Major.",
 "illustrator": "Claude (IA) · fan-made",
 "img": "cartes/P18.webp"
+},
+{
+"id": "P19",
+"label": "P19",
+"n": 1019,
+"name": "Kakayaga",
+"category": "Joueur",
+"subtype": null,
+"color": "Bleue",
+"def": 130,
+"stars": 5,
+"rarity": "P",
+"printedRarity": "P",
+"attacks": [
+{
+"name": "Largage",
+"cost": [
+"Neutre",
+"Neutre"
+],
+"damage": 80,
+"text": null
+}
+],
+"power": 80,
+"effect": null,
+"flavor": "Le Canadien encore éliminé !",
+"illustrator": "Fan-made",
+"img": "cartes/P19.webp"
 }
 ];
