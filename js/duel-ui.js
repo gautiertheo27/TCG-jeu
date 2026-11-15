@@ -388,6 +388,52 @@ export function initDuel({ S, toast, tick, esc }) {
     } else if (myTurn) buttons.push({ label: playHint(c), disabled: true });
     sheet(c, buttons);
   });
+
+  // ---------- glisser une carte de la main sur la case voulue ----------
+  let dragged = false;
+  board.addEventListener("click", (e) => { if (dragged) { e.stopPropagation(); e.preventDefault(); dragged = false; } }, true);
+  $("#bdHand").addEventListener("pointerdown", (e) => {
+    const el = e.target.closest(".hcard.playable"); if (!el || e.button > 0) return;
+    const c = g?.P(SEAT).hand[+el.dataset.i]; if (!c) return;
+    const myTurn = g.active === SEAT && g.phase === "action" && g.winner === null && !busy;
+    if (!myTurn || !g.canPlay(SEAT, c)) return;
+    const k = C(c), sx = e.clientX, sy = e.clientY; let ghost = null, started = false, last = null, scrollT = null;
+    const myLanes = () => [...board.querySelectorAll(`.lane[data-pi="${SEAT}"]`)];
+    const targets = () => {
+      if (k.category === "Joueur") { const free = g.freeLanes(SEAT); return free.length ? myLanes().filter((l) => free.includes(+l.dataset.lane)) : myLanes(); }
+      if (k.category === "Objet") return myLanes().filter((l) => l.dataset.uid);
+      return [board.querySelector("#matMe")];
+    };
+    const clearHi = () => board.querySelectorAll(".drop-ok, .drop-over").forEach((x) => x.classList.remove("drop-ok", "drop-over"));
+    const at = (x, y) => { if (ghost) ghost.style.display = "none"; const t = document.elementFromPoint(x, y); if (ghost) ghost.style.display = ""; return t; };
+    const find = (x, y) => { const t = at(x, y); if (!t) return null; const ok = targets().filter(Boolean); return ok.find((l) => l.contains(t)) || null; };
+    const move = (ev) => {
+      if (!started) {
+        if (Math.hypot(ev.clientX - sx, ev.clientY - sy) < 10) return;
+        started = true; hideTip();
+        ghost = document.createElement("div"); ghost.className = "drag-ghost"; ghost.innerHTML = cardHTML(k); document.body.appendChild(ghost);
+        el.classList.add("dragging"); targets().filter(Boolean).forEach((t) => t.classList.add("drop-ok"));
+      }
+      ghost.style.transform = `translate(${ev.clientX}px, ${ev.clientY}px) translate(-50%, -60%) rotate(-4deg)`;
+      last = ev; if (!scrollT) scrollT = setInterval(() => { if (!last) return; const dy = last.clientY < 110 ? -14 : last.clientY > innerHeight - 150 ? 14 : 0; if (dy) window.scrollBy(0, dy); }, 16);   // défilement automatique près des bords
+      clearHi(); targets().filter(Boolean).forEach((t) => t.classList.add("drop-ok")); const hit = find(ev.clientX, ev.clientY); hit?.classList.add("drop-over");
+      ev.preventDefault();
+    };
+    const end = (ev) => {
+      window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", end); window.removeEventListener("pointercancel", end);
+      clearInterval(scrollT); if (!started) return;
+      dragged = true; setTimeout(() => { dragged = false; }, 60);
+      const hit = ev.type === "pointerup" ? find(ev.clientX, ev.clientY) : null;
+      ghost?.remove(); clearHi(); el.classList.remove("dragging");
+      if (!hit || busy) return;
+      if (k.category === "Joueur") {
+        const free = g.freeLanes(SEAT), lane = +hit.dataset.lane;
+        if (free.length) run(() => g.playFromHand(SEAT, c, { lane })); else run(() => g.playFromHand(SEAT, c));
+      } else if (k.category === "Objet") { preSlot = g.P(SEAT).lanes[+hit.dataset.lane] || null; run(() => g.playFromHand(SEAT, c)); }
+      else run(() => g.playFromHand(SEAT, c));
+    };
+    window.addEventListener("pointermove", move, { passive: false }); window.addEventListener("pointerup", end); window.addEventListener("pointercancel", end);
+  });
   function playHint(c) {
     const k = C(c);
     if (k.category === "Coach" && g.P(SEAT).coachPlayed) return "Une seule carte Coach par tour";
@@ -445,7 +491,10 @@ export function initDuel({ S, toast, tick, esc }) {
   modal.addEventListener("click", (e) => { if (e.target === modal) closeModal(); });
 
   // Réponses humaines aux demandes du moteur
+  let preSlot = null;                        // case choisie en glissant un Objet : répond à la question « Lier à quel Joueur ? »
   function humanAsk(req) {
+    if (preSlot && req.kind === "slot" && req.slots?.includes(preSlot)) { const v = preSlot; preSlot = null; return Promise.resolve(v); }
+    preSlot = null;
     return new Promise((resolve) => {
       const done = (v) => { modalResolve = null; askModal = null; closeModal(); resolve(v); };
       modalResolve = null;
