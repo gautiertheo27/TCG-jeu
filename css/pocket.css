@@ -144,7 +144,7 @@ footer { padding-bottom: 110px; }
 /* ---------- Duel sur mobile : la main est visible, les boutons tiennent sur une ligne ---------- */
 @media (max-width: 899px) {
   #duelBoard { display: flex; flex-direction: column; }
-  #duelBoard .playmat { order: 0; } #duelBoard .tuto-bar { order: 1; } #duelBoard .bd-hand { order: 2; } #duelBoard .duel-end { order: 3; }
+  #duelBoard .playmat { order: 0; } #duelBoard .tuto-bar, #duelBoard .coach { order: 1; } #duelBoard .bd-hand { order: 2; } #duelBoard .duel-end { order: 3; }
   #duelBoard .bd-controls { order: 4; position: sticky; bottom: calc(84px + env(safe-area-inset-bottom)); width: 100%; max-width: none; padding: 8px 0 8px; background: linear-gradient(transparent, var(--bg) 35%); justify-content: stretch; }
   #duelBoard .bd-logbox { order: 5; }
   #duelBoard .bd-actions { display: flex; flex-wrap: nowrap; width: 100%; gap: 6px; }
@@ -186,3 +186,11 @@ footer { padding-bottom: 110px; }
 .drop-ok { outline: 3px dashed var(--pink); outline-offset: -3px; border-radius: 12px; animation: dropPulse 1s ease-in-out infinite; }
 .drop-over { outline-style: solid; background: #ff4fa322; box-shadow: 0 0 24px #ff4fa3aa inset; }
 @keyframes dropPulse { 50% { outline-color: #ffb6dc; } }
+
+/* Coach de combat (bulle d'instruction façon Pocket) */
+.coach{margin:6px auto;max-width:min(560px,94%);background:#fff;color:#2a1830;border-radius:14px;padding:8px 14px;font-size:.85rem;line-height:1.3;text-align:center;box-shadow:0 3px 14px #0006;position:relative}
+.coach.opp{background:#3a2442;color:#ffd9ec;border:1px solid #ff7ab855}
+.coach .muted{color:#7a5a80}
+.coach::after{content:"";position:absolute;left:50%;bottom:-6px;width:12px;height:12px;background:inherit;transform:translateX(-50%) rotate(45deg)}
+.hcard.playable.tuto-glow,.hcard.playable{animation:none}
+.lane.can-atk{animation:tutoGlow 1.2s ease-in-out infinite}

@@ -60,9 +60,9 @@ export const TUTO_PAGES = [
     <p>Aucune récompense en tuto : essaie, rate, recommence !</p>` },
 ];
 
-export function tutoHint(g, seat, { busy, myTurn, canPlay, canAttackAny }) {
+export function tutoHint(g, seat, { busy, myTurn, canPlay, canAttackAny, short }) {
   if (g.winner !== null) return { text: g.winner === seat ? "🏆 Bravo, tu as gagné ! Tu connais maintenant les bases." : "Partie terminée. Ce n'est pas grave : relance le tuto ou joue un vrai duel !" };
-  if (!myTurn) return { text: "⏳ <b>Tour de l'adversaire.</b> Regarde les animations : il déploie, attaque, et tu peux choisir de <b>défendre</b>. Touche une carte pour lire son texte." };
+  if (!myTurn) return short ? { text: "⏳ <b>L'adversaire a la main.</b> Si on t'attaque, tu pourras défendre." } : { text: "⏳ <b>Tour de l'adversaire.</b> Regarde les animations : il déploie, attaque, et tu peux choisir de <b>défendre</b>. Touche une carte pour lire son texte." };
   if (busy) return { text: "…" };
   const me = g.P(seat), lanes = g.slots(seat);
   if (g.phase === "action") {

@@ -332,7 +332,7 @@ export function initDuel({ S, toast, tick, esc }) {
     if (el && board.contains(el)) { e.stopPropagation(); e.preventDefault(); showTip(el); clearTimeout(tipTimer); tipTimer = setTimeout(hideTip, 5500); } else hideTip();
   }, true);
   const helpLabel = () => { $("#btnHelp").textContent = helpOn ? "💡 Bulles d'aide : oui" : "💡 Bulles d'aide : non"; $("#btnHelp").classList.toggle("on", helpOn); };
-  $("#btnHelp").addEventListener("click", () => { helpOn = !helpOn; try { localStorage.setItem("gmtcg.help", helpOn ? "1" : "0"); } catch (_) {} hideTip(); helpLabel(); toast(helpOn ? "Bulles d'aide activées : survole ou touche un élément." : "Bulles d'aide coupées."); });
+  $("#btnHelp").addEventListener("click", () => { helpOn = !helpOn; if (g) renderTuto(g.active === SEAT); try { localStorage.setItem("gmtcg.help", helpOn ? "1" : "0"); } catch (_) {} hideTip(); helpLabel(); toast(helpOn ? "Bulles d'aide activées : survole ou touche un élément." : "Bulles d'aide coupées."); });
   helpLabel();
 
   // ---------- mode tuto ----------
@@ -350,9 +350,11 @@ export function initDuel({ S, toast, tick, esc }) {
   }
   function renderTuto(myTurn) {
     const bar = $("#tutoBar"); document.querySelectorAll(".tuto-glow").forEach((e) => e.classList.remove("tuto-glow"));
-    bar.classList.toggle("hidden", !tuto || !g); if (!tuto || !g) return;
-    const h = tutoHint(g, SEAT, { busy, myTurn, canPlay: (c) => g.canPlay(SEAT, c), canAttackAny: () => g.slots(SEAT).some((s) => g.canAttack(SEAT, s) && g.attackOptions(SEAT, s).length) });
-    $("#tutoText").innerHTML = h.text;
+    bar.classList.toggle("hidden", !tuto || !g);
+    const coach = $("#coach"); coach.classList.toggle("hidden", tuto || !g || !helpOn || g.winner !== null); if (!g || (!tuto && !helpOn)) return;
+    const h = tutoHint(g, SEAT, { short: !tuto, busy, myTurn, canPlay: (c) => g.canPlay(SEAT, c), canAttackAny: () => g.slots(SEAT).some((s) => g.canAttack(SEAT, s) && g.attackOptions(SEAT, s).length) });
+    if (tuto) $("#tutoText").innerHTML = h.text; else $("#coachText").innerHTML = h.text;
+    coach.classList.toggle("opp", !myTurn);
     for (const sel of h.glow || []) document.querySelectorAll(sel).forEach((e) => e.classList.add("tuto-glow"));
   }
 
